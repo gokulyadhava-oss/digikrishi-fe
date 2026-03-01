@@ -46,6 +46,30 @@ const GRID_STROKE = "var(--chart-grid)";
 const TICK_STYLE = { fill: "var(--muted-foreground)", fontSize: 11 };
 const AXIS_LINE = { stroke: AXIS_STROKE, strokeWidth: 1.5 };
 
+/** Tooltip styling so chart tooltips respect light/dark theme */
+const CHART_TOOLTIP_STYLE = {
+  contentStyle: {
+    margin: 0,
+    padding: "10px 12px",
+    backgroundColor: "var(--popover)",
+    color: "var(--popover-foreground)",
+    border: "1px solid var(--border)",
+    borderRadius: "var(--radius)",
+    boxShadow: "var(--shadow-md)",
+    whiteSpace: "nowrap" as const,
+  },
+  itemStyle: { color: "var(--popover-foreground)" },
+  labelStyle: { color: "var(--popover-foreground)" },
+};
+
+const LABEL_MAX_LEN = 14;
+function truncateLabel(name: string, maxLen = LABEL_MAX_LEN) {
+  const s = String(name).trim();
+  if (s.length <= maxLen) return s;
+  if (maxLen <= 3) return s.slice(0, maxLen);
+  return s.slice(0, maxLen - 3) + "...";
+}
+
 function ChartSkeleton({ height }: { height: number }) {
   return (
     <div
@@ -143,7 +167,7 @@ export function AnalyticsPage() {
       <div>
         <h2 className="text-2xl font-bold tracking-tight">Analytics</h2>
         <p className="text-muted-foreground">
-          Farmer analytics from CSV and app data: location, demographics, and trends
+          Farmer analytics from CSV and app data: location and demographics
         </p>
       </div>
 
@@ -245,27 +269,70 @@ export function AnalyticsPage() {
                 <CardDescription>Farmers per district (top)</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartBox height={320} hasData={districtData.length > 0} isLoading={byDistrict.isLoading}>
-                  <div className="h-80">
+                <ChartBox height={288} hasData={districtData.length > 0} isLoading={byDistrict.isLoading}>
+                  <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={districtData} margin={{ top: 20, right: 20, left: 0, bottom: 60 }}>
+                      <LineChart data={districtData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                         <XAxis
                           dataKey="name"
                           angle={-45}
                           textAnchor="end"
                           height={80}
-                          tick={{ ...TICK_STYLE, fontSize: 11 }}
+                          tick={{ ...TICK_STYLE, fontSize: 10 }}
+                          tickFormatter={truncateLabel}
                           axisLine={AXIS_LINE}
                           tickLine={{ stroke: AXIS_STROKE }}
                         />
                         <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                        <Tooltip />
+                        <Tooltip {...CHART_TOOLTIP_STYLE} />
                         <Line type="monotone" dataKey="count" stroke={CHART_COLORS[0]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </ChartBox>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Location summary</CardTitle>
+                <CardDescription>Coverage from current data</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {byDistrict.isLoading ? (
+                  <div className="flex flex-col gap-3" style={{ minHeight: 288 }}>
+                    <Skeleton className="h-14 w-full rounded" />
+                    <Skeleton className="h-14 w-full rounded" />
+                    <Skeleton className="h-14 w-full rounded" />
+                    <Skeleton className="h-14 w-full rounded" />
+                  </div>
+                ) : (
+                  <div className="space-y-4" style={{ minHeight: 288 }}>
+                    <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+                      <p className="text-sm text-muted-foreground">Districts</p>
+                      <p className="text-2xl font-bold">{districtData.length}</p>
+                    </div>
+                    {districtData.length > 0 && (
+                      <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
+                        <p className="text-sm text-muted-foreground">Top district</p>
+                        <p className="text-lg font-semibold truncate" title={districtData[0].name}>
+                          {districtData[0].name}
+                        </p>
+                        <p className="text-2xl font-bold text-primary">{districtData[0].count} farmers</p>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                        <p className="text-xs text-muted-foreground">Top villages</p>
+                        <p className="text-xl font-bold">{villageData.length}</p>
+                      </div>
+                      <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                        <p className="text-xs text-muted-foreground">Top talukas</p>
+                        <p className="text-xl font-bold">{talukaData.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -286,11 +353,12 @@ export function AnalyticsPage() {
                           textAnchor="end"
                           height={80}
                           tick={{ ...TICK_STYLE, fontSize: 10 }}
+                          tickFormatter={truncateLabel}
                           axisLine={AXIS_LINE}
                           tickLine={{ stroke: AXIS_STROKE }}
                         />
                         <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                        <Tooltip />
+                        <Tooltip {...CHART_TOOLTIP_STYLE} />
                         <Line type="monotone" dataKey="count" stroke={CHART_COLORS[2]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
                       </LineChart>
                     </ResponsiveContainer>
@@ -314,11 +382,12 @@ export function AnalyticsPage() {
                           textAnchor="end"
                           height={80}
                           tick={{ ...TICK_STYLE, fontSize: 10 }}
+                          tickFormatter={truncateLabel}
                           axisLine={AXIS_LINE}
                           tickLine={{ stroke: AXIS_STROKE }}
                         />
                         <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                        <Tooltip />
+                        <Tooltip {...CHART_TOOLTIP_STYLE} />
                         <Line type="monotone" dataKey="count" stroke={CHART_COLORS[3]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
                       </LineChart>
                     </ResponsiveContainer>
@@ -356,11 +425,12 @@ export function AnalyticsPage() {
                           textAnchor="end"
                           height={80}
                           tick={{ ...TICK_STYLE, fontSize: 10 }}
+                          tickFormatter={truncateLabel}
                           axisLine={AXIS_LINE}
                           tickLine={{ stroke: AXIS_STROKE }}
                         />
                         <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                        <Tooltip />
+                        <Tooltip {...CHART_TOOLTIP_STYLE} />
                         <Line type="monotone" dataKey="count" stroke={CHART_COLORS[4]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
                       </LineChart>
                     </ResponsiveContainer>
@@ -395,7 +465,7 @@ export function AnalyticsPage() {
                             <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip {...CHART_TOOLTIP_STYLE} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
@@ -421,11 +491,12 @@ export function AnalyticsPage() {
                         textAnchor="end"
                         height={80}
                         tick={{ ...TICK_STYLE, fontSize: 10 }}
+                        tickFormatter={truncateLabel}
                         axisLine={AXIS_LINE}
                         tickLine={{ stroke: AXIS_STROKE }}
                       />
                       <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                      <Tooltip />
+                      <Tooltip {...CHART_TOOLTIP_STYLE} />
                       <Line type="monotone" dataKey="count" stroke={CHART_COLORS[5]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
                     </LineChart>
                   </ResponsiveContainer>
@@ -451,7 +522,7 @@ export function AnalyticsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
                       <XAxis dataKey="name" tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
                       <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                      <Tooltip />
+                      <Tooltip {...CHART_TOOLTIP_STYLE} />
                       <Line
                         type="monotone"
                         dataKey="count"

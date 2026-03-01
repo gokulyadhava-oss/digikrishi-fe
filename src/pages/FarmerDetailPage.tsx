@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -160,6 +160,8 @@ export function FarmerDetailPage() {
     { key: "aadhaar_url", label: "Aadhaar", docType: "aadhaar" },
     { key: "pan_url", label: "PAN", docType: "pan" },
     { key: "bank_doc_url", label: "Bank", docType: "bank_doc" },
+    { key: "ration_card_url", label: "Ration Card", docType: "ration_card" },
+    { key: "survey_form_url", label: "Survey Form", docType: "survey_form" },
     { key: "other_doc_url", label: "Other", docType: "other" },
   ];
 
@@ -366,16 +368,7 @@ export function FarmerDetailPage() {
             >
               Save changes
             </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              onClick={() => setDeleteConfirmOpen(true)}
-              title="Deactivate farmer"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+            </div>
         )}
       </div>
 
@@ -603,6 +596,29 @@ export function FarmerDetailPage() {
                   )}
                 />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mt-6 border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-destructive">Account actions</CardTitle>
+            <CardDescription>Deactivate hides the farmer from active use. They can be reactivated later.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setDeleteConfirmOpen(true)}
+                disabled={farmer && !farmer.is_activated}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Deactivate farmer
+              </Button>
+              {farmer && !farmer.is_activated && (
+                <span className="text-sm text-muted-foreground">This farmer is already deactivated.</span>
+              )}
             </div>
           </CardContent>
         </Card>

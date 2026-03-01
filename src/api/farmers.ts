@@ -1,5 +1,12 @@
 import { api } from "@/lib/axios";
-import type { Farmer, FarmerDoc, FarmerCreatePayload, PaginationState } from "@/types";
+import type {
+  Farmer,
+  FarmerDoc,
+  FarmerCreatePayload,
+  PaginationState,
+  FarmerListFilters,
+  FarmerListSort,
+} from "@/types";
 
 export interface FarmersListResponse {
   farmers: Farmer[];
@@ -8,10 +15,23 @@ export interface FarmersListResponse {
   limit: number;
 }
 
-export async function fetchFarmers(params: PaginationState): Promise<FarmersListResponse> {
-  const { data } = await api.get<FarmersListResponse>("/farmers", {
-    params: { page: params.page, limit: params.limit },
-  });
+export interface FarmersListParams extends PaginationState {
+  filters?: FarmerListFilters;
+  sort?: FarmerListSort;
+}
+
+export async function fetchFarmers(params: FarmersListParams): Promise<FarmersListResponse> {
+  const { page, limit, filters = {}, sort = {} } = params;
+  const query: Record<string, string | number> = { page, limit };
+  if (filters.has_ration_card) query.has_ration_card = "true";
+  if (filters.has_profile_pic) query.has_profile_pic = "true";
+  if (filters.has_bank_details) query.has_bank_details = "true";
+  if (filters.has_document) query.has_document = "true";
+  if (filters.has_fhc) query.has_fhc = "true";
+  if (filters.has_shg) query.has_shg = "true";
+  if (sort.sortBy) query.sortBy = sort.sortBy;
+  if (sort.sortOrder) query.sortOrder = sort.sortOrder;
+  const { data } = await api.get<FarmersListResponse>("/farmers", { params: query });
   return data;
 }
 

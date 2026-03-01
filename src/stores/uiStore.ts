@@ -3,9 +3,9 @@ import { create } from "zustand";
 const THEME_KEY = "khetibuddy-theme";
 
 function getStoredTheme(): "light" | "dark" {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return "dark";
   const stored = localStorage.getItem(THEME_KEY) as "light" | "dark" | null;
-  return stored === "dark" || stored === "light" ? stored : "light";
+  return stored === "dark" || stored === "light" ? stored : "dark";
 }
 
 function applyTheme(theme: "light" | "dark") {

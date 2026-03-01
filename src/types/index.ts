@@ -63,6 +63,8 @@ export interface FarmerDoc {
   aadhaar_url?: string | null;
   pan_url?: string | null;
   bank_doc_url?: string | null;
+  ration_card_url?: string | null;
+  survey_form_url?: string | null;
   other_doc_url?: string | null;
 }
 
@@ -143,4 +145,20 @@ export interface FarmerFilters {
   district?: string;
   state?: string;
   fpc?: string;
+}
+
+/** List page: filter by presence of data (multi-select). Only true values are sent to API. */
+export interface FarmerListFilters {
+  has_ration_card?: boolean;
+  has_profile_pic?: boolean;
+  has_bank_details?: boolean;
+  has_document?: boolean;
+  has_fhc?: boolean;
+  has_shg?: boolean;
+}
+
+/** List page: sort column and direction. */
+export interface FarmerListSort {
+  sortBy?: "farmer_code" | "name" | "village" | "district";
+  sortOrder?: "asc" | "desc";
 }

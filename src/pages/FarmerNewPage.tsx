@@ -31,6 +31,8 @@ const farmerSchema = z.object({
   ration_card: z.boolean().optional(),
   pan_url: z.string().optional(),
   aadhaar_url: z.string().optional(),
+  ration_card_url: z.string().optional(),
+  survey_form_url: z.string().optional(),
 });
 
 type FarmerForm = z.infer<typeof farmerSchema>;
@@ -91,6 +93,8 @@ export function FarmerNewPage() {
       docs: {
         pan_url: values.pan_url?.trim() || null,
         aadhaar_url: values.aadhaar_url?.trim() || null,
+        ration_card_url: values.ration_card_url?.trim() || null,
+        survey_form_url: values.survey_form_url?.trim() || null,
       },
     });
   }
@@ -137,34 +141,9 @@ export function FarmerNewPage() {
                 )}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="profile_pic_url">Profile picture (CDN URL)</Label>
-              <Input
-                id="profile_pic_url"
-                type="url"
-                placeholder="https://..."
-                {...register("profile_pic_url")}
-              />
-            </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="pan_url">PAN (CDN URL)</Label>
-                <Input
-                  id="pan_url"
-                  type="url"
-                  placeholder="https://..."
-                  {...register("pan_url")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="aadhaar_url">Aadhaar (CDN URL)</Label>
-                <Input
-                  id="aadhaar_url"
-                  type="url"
-                  placeholder="https://..."
-                  {...register("aadhaar_url")}
-                />
-              </div>
+             
+       
             </div>
           </CardContent>
         </Card>

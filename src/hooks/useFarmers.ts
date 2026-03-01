@@ -1,13 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 import { fetchFarmers, assignFarmerToAgent } from "@/api/farmers";
-import { paginationAtom } from "@/atoms";
+import { paginationAtom, farmerListFiltersAtom, farmerListSortAtom } from "@/atoms";
 
 export function useFarmers() {
   const pagination = useAtomValue(paginationAtom);
+  const listFilters = useAtomValue(farmerListFiltersAtom);
+  const listSort = useAtomValue(farmerListSortAtom);
   return useQuery({
-    queryKey: ["farmers", pagination.page, pagination.limit],
-    queryFn: () => fetchFarmers(pagination),
+    queryKey: ["farmers", pagination.page, pagination.limit, listFilters, listSort],
+    queryFn: () => fetchFarmers({ ...pagination, filters: listFilters, sort: listSort }),
   });
 }
 
