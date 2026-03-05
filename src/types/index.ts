@@ -155,6 +155,8 @@ export interface FarmerListFilters {
   has_document?: boolean;
   has_fhc?: boolean;
   has_shg?: boolean;
+  fpc?: string | null;
+  shg?: string | null;
 }
 
 /** List page: sort column and direction. */

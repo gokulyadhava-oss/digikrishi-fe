@@ -1,10 +1,10 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/authStore";
 
-// In dev with no VITE_APP_URL, use /api so Vite proxies to backend (no CORS). Set VITE_APP_URL for production or to hit a specific API.
+// Use VITE_APP_URL or VITE_API_URL so requests go to the backend. In dev, VITE_API_URL=http://127.0.0.1:3001.
+// If neither is set, fall back to /api (relies on Vite proxy in dev).
 const host = import.meta.env.VITE_APP_URL ?? import.meta.env.VITE_API_URL ?? "";
-const baseURL =
-  import.meta.env.DEV && !import.meta.env.VITE_APP_URL ? "/api" : host ? `${host.replace(/\/$/, "")}/api` : "/api";
+const baseURL = host ? `${String(host).replace(/\/$/, "")}/api` : "/api";
 
 export const api = axios.create({
   baseURL,

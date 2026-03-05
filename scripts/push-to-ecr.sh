@@ -2,8 +2,9 @@
 # Build the frontend Docker image and push to AWS ECR.
 # Usage (from digikrishi-fe):
 #   ./scripts/push-to-ecr.sh
-#   VITE_API_URL=https://api.yourdomain.com ./scripts/push-to-ecr.sh
-#   ECR_REPO_NAME=digikrishi-web AWS_REGION=eu-north-1 IMAGE_TAG=v1.0.0 ./scripts/push-to-ecr.sh
+#   (Script loads .env automatically, so VITE_GOOGLE_MAPS_API_KEY and VITE_API_URL from .env are used.)
+#   Or pass inline: VITE_APP_URL=https://api.digikrishi.com VITE_GOOGLE_MAPS_API_KEY=xxx ./scripts/push-to-ecr.sh
+#   Force clean build: NO_CACHE=1 ./scripts/push-to-ecr.sh
 #
 # Requires: aws CLI, docker. AWS credentials must be configured.
 
@@ -22,8 +23,17 @@ cd "$FE_DIR"
 ECR_REPO_NAME="${ECR_REPO_NAME:-digikrishi-web}"
 AWS_REGION="${AWS_REGION:-eu-north-1}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
-# Optional: API URL baked into the frontend at build time (e.g. https://api.yourdomain.com)
+
+# Load .env from project root so VITE_* are available (e.g. VITE_GOOGLE_MAPS_API_KEY). .env is not copied into the image.
+if [[ -f "$FE_DIR/.env" ]]; then
+  set -a
+  source "$FE_DIR/.env"
+  set +a
+fi
+# Override with current shell env (so you can also: VITE_GOOGLE_MAPS_API_KEY=xxx ./scripts/push-to-ecr.sh)
 VITE_API_URL="${VITE_API_URL:-}"
+VITE_APP_URL="${VITE_APP_URL:-}"
+VITE_GOOGLE_MAPS_API_KEY="${VITE_GOOGLE_MAPS_API_KEY:-}"
 
 echo "→ Resolving AWS account ID..."
 AWS_ACCOUNT_ID="$(aws sts get-caller-identity --region "$AWS_REGION" --query Account --output text)"
@@ -39,11 +49,16 @@ aws ecr get-login-password --region "$AWS_REGION" |
 
 # Build for linux/amd64 so the image runs on EC2 (x86_64)
 echo "→ Building image: ${ECR_URI}:${IMAGE_TAG} (linux/amd64)..."
-if [[ -n "$VITE_API_URL" ]]; then
-  docker build --platform linux/amd64 -t "${ECR_URI}:${IMAGE_TAG}" --build-arg "VITE_API_URL=${VITE_API_URL}" .
-else
-  docker build --platform linux/amd64 -t "${ECR_URI}:${IMAGE_TAG}" .
+[[ -z "$VITE_GOOGLE_MAPS_API_KEY" ]] && echo "⚠ Warning: VITE_GOOGLE_MAPS_API_KEY not set — Maps will show 'API Key Missing'. Set it in .env or pass when running this script."
+BUILD_ARGS=(--platform linux/amd64 -t "${ECR_URI}:${IMAGE_TAG}")
+[[ -n "$VITE_API_URL" ]]             && BUILD_ARGS+=(--build-arg "VITE_API_URL=${VITE_API_URL}")
+[[ -n "$VITE_APP_URL" ]]             && BUILD_ARGS+=(--build-arg "VITE_APP_URL=${VITE_APP_URL}")
+[[ -n "$VITE_GOOGLE_MAPS_API_KEY" ]] && BUILD_ARGS+=(--build-arg "VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}")
+# Use NO_CACHE=1 to force a clean build (e.g. after fixing env vars)
+if [[ -n "${NO_CACHE:-}" ]]; then
+  BUILD_ARGS=(--no-cache "${BUILD_ARGS[@]}")
 fi
+docker build "${BUILD_ARGS[@]}" .
 
 echo "→ Pushing to ECR..."
 docker push "${ECR_URI}:${IMAGE_TAG}"

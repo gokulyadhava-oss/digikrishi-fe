@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/toast";
 import { useFarmer } from "@/hooks/useFarmer";
 import { useFarmerDocuments } from "@/hooks/useFarmerDocuments";
+import { useFarmerPlots, usePlotMaps } from "@/hooks/useFarmerPlots";
 import {
   updateFarmer,
   deleteFarmer,
@@ -21,6 +22,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -30,10 +39,12 @@ import { PageLoader } from "@/components/ui/loader";
 import { DotLoader } from "@/components/ui/dot-loader";
 import { getErrorMessage } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FileImage, FileText, CreditCard, Trash2, Download, Upload, Pencil } from "lucide-react";
+import { ArrowLeft, FileImage, FileText, CreditCard, Trash2, Download, Upload, Pencil, ChevronDown, ChevronRight, MapPin } from "lucide-react";
 import { CascadingDropdownModal } from "@/components/cascading-dropdown-modal";
+import { Map as MapIcon } from "lucide-react";
+import { PlotMapViewer } from "@/components/PlotMapViewer";
 
-type TabId = "details" | "documents";
+type TabId = "details" | "documents" | "plots";
 
 const farmerSchema = z.object({
   farmer_code: z.string().min(1),
@@ -67,6 +78,20 @@ function getInitials(name: string | null | undefined): string {
   return n.slice(0, 2).toUpperCase();
 }
 
+/** Normalized date for skimming: "3 Mar 2026, 6:24 am" */
+function formatCreatedAt(iso: string | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export function FarmerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -83,6 +108,16 @@ export function FarmerDetailPage() {
   const documentFileInputRef = useRef<HTMLInputElement>(null);
   const { data: farmer, isLoading, error } = useFarmer(id, activeTab === "details");
   const { data: documents, isLoading: documentsLoading } = useFarmerDocuments(id, activeTab === "documents");
+  const { data: plotsRaw = [], isLoading: plotsLoading } = useFarmerPlots(id, activeTab === "plots");
+  const [expandedPlotId, setExpandedPlotId] = useState<string | null>(null);
+  const plots = useMemo(
+    () => [...plotsRaw].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [plotsRaw]
+  );
+  const { data: plotMaps = [], isLoading: plotMapsLoading } = usePlotMaps(
+    id ?? undefined,
+    expandedPlotId ?? undefined
+  );
   const mutation = useMutation({
     mutationFn: ({ id: farmerId, payload }: { id: string; payload: Parameters<typeof updateFarmer>[1] }) =>
       updateFarmer(farmerId, payload),
@@ -155,7 +190,7 @@ export function FarmerDetailPage() {
   const doc = activeTab === "documents" ? documents : farmer?.FarmerDoc;
   const docTypes: { key: keyof NonNullable<typeof doc>; label: string; docType: string }[] = [
     { key: "shg_byelaws_url", label: "SHG Bye-laws", docType: "shg_byelaws" },
-    { key: "extract_7_12_url", label: "7/12 Extract", docType: "extract_7_12" },
+    { key: "extract_7_12_url", label: "Land Documents", docType: "extract_7_12" },
     { key: "consent_letter_url", label: "Consent Letter", docType: "consent_letter" },
     { key: "aadhaar_url", label: "Aadhaar", docType: "aadhaar" },
     { key: "pan_url", label: "PAN", docType: "pan" },
@@ -372,7 +407,7 @@ export function FarmerDetailPage() {
         )}
       </div>
 
-      <div className="flex gap-3 border-b border-border pb-3">
+      <div className="flex gap-3 border-b border-border pb-3 overflow-x-auto">
         <Button
           type="button"
           variant={activeTab === "details" ? "default" : "ghost"}
@@ -392,6 +427,16 @@ export function FarmerDetailPage() {
         >
           <CreditCard className="h-6 w-6" />
           Documents
+        </Button>
+        <Button
+          type="button"
+          variant={activeTab === "plots" ? "default" : "ghost"}
+          size="lg"
+          className="px-6 py-6 text-base gap-2"
+          onClick={() => setActiveTab("plots")}
+        >
+          <MapIcon className="h-6 w-6" />
+          Plots
         </Button>
       </div>
 
@@ -635,7 +680,7 @@ export function FarmerDetailPage() {
           <CardContent className="relative flex flex-wrap gap-4">
             {documentUploading && (
               <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/80">
-                <DotLoader className="h-8 w-8 text-primary" />
+                <DotLoader className="h-8 w-8 text-foreground" />
               </div>
             )}
             {documentsLoading ? (
@@ -659,13 +704,13 @@ export function FarmerDetailPage() {
                     className={`group/doc flex flex-col items-center justify-center gap-2 rounded-lg border p-6 min-w-[140px] transition-colors ${
                       hasUrl
                         ? "border-border bg-muted/50 hover:bg-muted cursor-pointer"
-                        : "border-border/60 bg-muted/20 opacity-60 hover:opacity-90 hover:bg-muted/40 hover:border-primary/30 cursor-pointer"
+                        : "border-border/60 bg-muted/20 opacity-60 hover:opacity-90 hover:bg-muted/40 hover:border-border cursor-pointer"
                     }`}
                   >
                     {hasUrl ? (
-                      <FileImage className="h-10 w-10 text-emerald-600 dark:text-emerald-500" />
+                      <FileImage className="h-10 w-10 text-foreground" />
                     ) : (
-                      <Upload className="h-10 w-10 text-muted-foreground/50 group-hover/doc:text-primary" />
+                      <Upload className="h-10 w-10 text-muted-foreground group-hover/doc:text-foreground" />
                     )}
                     <span className="text-sm font-medium">{label}</span>
                     <span className="text-xs text-muted-foreground truncate max-w-[120px] group-hover/doc:text-foreground">
@@ -674,6 +719,165 @@ export function FarmerDetailPage() {
                   </button>
                 );
               })
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "plots" && (
+        <Card className="w-full max-w-6xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+
+              Plots & Crops
+            </CardTitle>
+            <CardDescription>
+              Crop and land records for this farmer
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {plotsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <PageLoader />
+              </div>
+            ) : !plots || plots.length === 0 ? (
+              <div className="py-12 text-center">
+                <MapIcon className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">No plots or crops recorded yet</p>
+                <p className="text-xs text-muted-foreground/70 mt-2">
+                  Records added via the mobile app will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-md border border-white/20 overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/10 hover:bg-white/5">
+                      <TableHead className="text-muted-foreground font-semibold w-8" />
+                      <TableHead className="text-muted-foreground font-semibold">Variety</TableHead>
+                      <TableHead className="text-muted-foreground font-semibold">Season</TableHead>
+                      <TableHead className="text-muted-foreground font-semibold">Land size</TableHead>
+                      <TableHead className="text-muted-foreground font-semibold whitespace-nowrap">Created on</TableHead>
+                      <TableHead className="text-muted-foreground font-semibold w-28">View plot</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {plots.map((plot) => {
+                      const isExpanded = expandedPlotId === plot.id;
+                      return (
+                        <React.Fragment key={plot.id}>
+                          <TableRow className="border-white/10 hover:bg-white/5">
+                            <TableCell className="w-8 p-1">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedPlotId(isExpanded ? null : plot.id)}
+                                className="p-1 rounded hover:bg-white/10 text-muted-foreground"
+                                aria-label={isExpanded ? "Collapse" : "Expand"}
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </button>
+                            </TableCell>
+                            <TableCell className="font-medium">{plot.variety || "—"}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="border-emerald-500/40 text-emerald-400">
+                                {plot.season || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {plot.land_size_value} {plot.units}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                              {formatCreatedAt(plot.created_at)}
+                            </TableCell>
+                            <TableCell className="w-28 p-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 border-white/20"
+                                onClick={() => setExpandedPlotId(isExpanded ? null : plot.id)}
+                              >
+                                <MapPin className="h-3.5 w-3.5" />
+                                {isExpanded ? "Hide" : "View plot"}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <TableRow className="border-white/10 bg-white/[0.02]">
+                              <TableCell colSpan={6} className="p-0 align-top">
+                                <div className="px-4 pb-4 pt-3 border-t border-white/10 space-y-4">
+                                  {/* Plot details - shown when accordion is opened */}
+                                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 md:grid-cols-4">
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Sowing date</p>
+                                      <p className="font-medium">
+                                        {plot.sowing_date
+                                          ? new Date(plot.sowing_date).toLocaleDateString(undefined, {
+                                              year: "numeric",
+                                              month: "short",
+                                              day: "numeric",
+                                            })
+                                          : "—"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Sowing method</p>
+                                      <p className="font-medium">{plot.sowing_method || "—"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Irrigation</p>
+                                      <p className="font-medium">{plot.irrigation_method || "—"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Farming type</p>
+                                      <p className="font-medium">{plot.farming_type || "—"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Planting material</p>
+                                      <p className="font-medium">{plot.planting_material || "—"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Address</p>
+                                      <p className="font-medium">{plot.address || "—"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Taluka / District</p>
+                                      <p className="font-medium">
+                                        {[plot.taluka, plot.district].filter(Boolean).join(", ") || "—"}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Pincode</p>
+                                      <p className="font-medium">{plot.pincode || "—"}</p>
+                                    </div>
+                                  </div>
+                                  {/* Map / coordinates section */}
+                                  {plotMapsLoading ? (
+                                    <div className="flex items-center justify-center py-8">
+                                      <PageLoader />
+                                    </div>
+                                  ) : plotMaps.length === 0 ? (
+                                    <div className="py-8 text-center text-muted-foreground text-sm">
+                                      <MapIcon className="h-10 w-10 mx-auto opacity-50 mb-2" />
+                                      <p>No map or coordinates recorded for this plot</p>
+                                    </div>
+                                  ) : (
+                                    <PlotMapViewer plotMaps={plotMaps} farmerId={id ?? undefined} plotId={expandedPlotId ?? undefined} />
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>

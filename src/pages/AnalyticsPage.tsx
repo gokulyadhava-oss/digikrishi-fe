@@ -323,11 +323,11 @@ export function AnalyticsPage() {
                     )}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-                        <p className="text-xs text-muted-foreground">Top villages</p>
+                        <p className="text-xs text-muted-foreground">Villages</p>
                         <p className="text-xl font-bold">{villageData.length}</p>
                       </div>
                       <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
-                        <p className="text-xs text-muted-foreground">Top talukas</p>
+                        <p className="text-xs text-muted-foreground">Talukas</p>
                         <p className="text-xl font-bold">{talukaData.length}</p>
                       </div>
                     </div>

@@ -29,6 +29,8 @@ export async function fetchFarmers(params: FarmersListParams): Promise<FarmersLi
   if (filters.has_document) query.has_document = "true";
   if (filters.has_fhc) query.has_fhc = "true";
   if (filters.has_shg) query.has_shg = "true";
+  if (filters.fpc) query.fpc = filters.fpc;
+  if (filters.shg) query.shg = filters.shg;
   if (sort.sortBy) query.sortBy = sort.sortBy;
   if (sort.sortOrder) query.sortOrder = sort.sortOrder;
   const { data } = await api.get<FarmersListResponse>("/farmers", { params: query });

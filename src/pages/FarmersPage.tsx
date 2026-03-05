@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAtom } from "jotai";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/atoms";
 import { useFarmers } from "@/hooks/useFarmers";
 import { useSearchFarmers } from "@/hooks/useSearchFarmers";
+import { useFpcList, useShgList } from "@/hooks/useOptions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -20,9 +21,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PageLoader } from "@/components/ui/loader";
-import { Plus, Search, ChevronLeft, ChevronRight, Filter, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
+import { HierarchyCard } from "@/components/HierarchyCard";
 import type { FarmerListSort } from "@/types";
 
 const SORT_COLUMNS: { key: FarmerListSort["sortBy"]; label: string }[] = [
@@ -36,8 +39,10 @@ export function FarmersPage() {
   const [pagination, setPagination] = useAtom(paginationAtom);
   const [listFilters, setListFilters] = useAtom(farmerListFiltersAtom);
   const [listSort, setListSort] = useAtom(farmerListSortAtom);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  const { data: fpcList = [], isLoading: fpcLoading } = useFpcList();
+  const { data: shgList = [], isLoading: shgLoading } = useShgList(listFilters.fpc);
 
   const hasSearch = searchQuery.trim().length > 0;
   const listQuery = useFarmers();
@@ -52,14 +57,6 @@ export function FarmersPage() {
     setPagination((p) => (p.page === 1 ? p : { ...p, page: 1 }));
   }, [listFilters, listSort, setPagination]);
 
-  // Close filter dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false);
-    };
-    document.addEventListener("click", handleClick);
-    return () => document.removeEventListener("click", handleClick);
-  }, []);
 
   const toggleFilter = useCallback((key: keyof typeof listFilters, value: boolean) => {
     setListFilters((f) => ({ ...f, [key]: value || undefined }));
@@ -75,15 +72,6 @@ export function FarmersPage() {
     },
     [setListSort]
   );
-
-  const activeFilterCount = [
-    listFilters.has_ration_card,
-    listFilters.has_profile_pic,
-    listFilters.has_bank_details,
-    listFilters.has_document,
-    listFilters.has_fhc,
-    listFilters.has_shg,
-  ].filter(Boolean).length;
 
   const { data: listData, isLoading: listLoading } = listQuery;
   const { data: searchData, isLoading: searchLoading } = searchQueryResult;
@@ -115,7 +103,8 @@ export function FarmersPage() {
       </div>
 
       <Card>
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 space-y-4">
+          {/* Search + Advanced Filter (as icon) row */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -126,72 +115,146 @@ export function FarmersPage() {
                 className="pl-9"
               />
             </div>
-            <div className="relative" ref={filterRef}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setFilterOpen((o) => !o)}
-                className="gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                Filter
-                {activeFilterCount > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 text-xs font-medium text-primary">
-                    {activeFilterCount}
-                  </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAdvancedOpen((o) => !o)}
+              className="gap-2"
+              title={advancedOpen ? "Hide advanced filters" : "Show advanced filters"}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* FPC → SHG Visual Hierarchy + Status Summary (HIDDEN by default) */}
+          {advancedOpen && (
+          <div className="flex gap-3 items-start overflow-x-auto pb-2">
+            <HierarchyCard
+              icon="🏢"
+              label="FPC"
+              items={fpcList.map((fpc) => ({ id: fpc, label: fpc }))}
+              selectedId={listFilters.fpc || null}
+              onSelect={(fpc) => {
+                setListFilters((f) => ({ ...f, fpc, shg: null }));
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
+              onClear={() => {
+                setListFilters((f) => ({ ...f, fpc: null, shg: null }));
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
+              isLoading={fpcLoading}
+            />
+
+            {/* Dashed connector arrow */}
+            <div className="flex flex-col items-center justify-center flex-shrink-0 py-6">
+              <div
+                className={cn(
+                  "w-8 border-t-2 border-dashed transition-all duration-300",
+                  listFilters.fpc ? "border-white/40" : "border-white/15"
                 )}
-              </Button>
-              {filterOpen && (
-                <div className="absolute right-0 top-full z-10 mt-1 w-56 rounded-md border bg-popover p-2 shadow-md">
-                  <p className="mb-2 text-xs font-medium text-muted-foreground">Show farmers who have</p>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <Checkbox
-                        checked={!!listFilters.has_ration_card}
-                        onCheckedChange={(c) => toggleFilter("has_ration_card", c === true)}
-                      />
-                      <span className="text-sm">Has ration card</span>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <Checkbox
-                        checked={!!listFilters.has_profile_pic}
-                        onCheckedChange={(c) => toggleFilter("has_profile_pic", c === true)}
-                      />
-                      <span className="text-sm">Has profile pic</span>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <Checkbox
-                        checked={!!listFilters.has_bank_details}
-                        onCheckedChange={(c) => toggleFilter("has_bank_details", c === true)}
-                      />
-                      <span className="text-sm">Has bank details</span>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <Checkbox
-                        checked={!!listFilters.has_document}
-                        onCheckedChange={(c) => toggleFilter("has_document", c === true)}
-                      />
-                      <span className="text-sm">Has document</span>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <Checkbox
-                        checked={!!listFilters.has_fhc}
-                        onCheckedChange={(c) => toggleFilter("has_fhc", c === true)}
-                      />
-                      <span className="text-sm">Has FHC</span>
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-2">
-                      <Checkbox
-                        checked={!!listFilters.has_shg}
-                        onCheckedChange={(c) => toggleFilter("has_shg", c === true)}
-                      />
-                      <span className="text-sm">Has SHG</span>
-                    </label>
-                  </div>
-                </div>
-              )}
+              />
+              <span className={cn("text-xs mt-1 transition-all duration-300", listFilters.fpc ? "text-white" : "text-slate-600")}>
+                ›
+              </span>
+            </div>
+
+            <HierarchyCard
+              icon="👥"
+              label={listFilters.fpc ? `SHGs in ${listFilters.fpc.split(" ")[0]}` : "SHG"}
+              items={shgList.map((shg) => ({ id: shg, label: shg }))}
+              selectedId={listFilters.shg || null}
+              onSelect={(shg) => {
+                setListFilters((f) => ({ ...f, shg }));
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
+              onClear={() => {
+                setListFilters((f) => ({ ...f, shg: null }));
+                setPagination((p) => ({ ...p, page: 1 }));
+              }}
+              isLoading={shgLoading}
+              disabled={!listFilters.fpc}
+            />
+
+            {/* Dashed connector arrow 2 */}
+            <div className="flex flex-col items-center justify-center flex-shrink-0 py-6">
+              <div
+                className={cn(
+                  "w-8 border-t-2 border-dashed transition-all duration-300",
+                  listFilters.shg ? "border-white/40" : "border-white/15"
+                )}
+              />
+              <span className={cn("text-xs mt-1 transition-all duration-300", listFilters.shg ? "text-white" : "text-slate-600")}>
+                ›
+              </span>
+            </div>
+
+            {/* Farmers Status Summary Card */}
+            <div className="flex-1 min-w-0 rounded-lg border border-white/20 bg-gradient-to-br from-black via-slate-950 to-black overflow-hidden shadow-lg hover:border-white/30 transition-colors">
+              <div className="px-4 py-3 border-b border-white/10 bg-black">
+                <span className="flex items-center gap-2 text-xs font-semibold text-white uppercase tracking-wider">
+                  👨‍🌾 Farmers {listFilters.fpc ? `in ${listFilters.fpc.split(" ")[0]}` : ""}
+                </span>
+              </div>
+              <div className="p-4 text-center">
+                <p className="text-3xl font-bold text-white">{farmers.length}</p>
+                <p className="text-xs text-slate-400 mt-2">
+                  {total > farmers.length ? `${total} total` : "listed"}
+                </p>
+              </div>
             </div>
           </div>
+          )}
+
+          {/* Show farmers who have - Filters (ONLY when FPC or SHG selected) */}
+          {advancedOpen && (
+            <div className="border-t border-white/10 pt-4 mt-4">
+              <p className="mb-3 text-xs font-semibold text-white uppercase tracking-wider">Show farmers who have</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+                <label className="flex cursor-pointer items-center gap-2 p-2.5 rounded-lg border border-white/15 hover:border-white/25 hover:bg-white/8 transition-all">
+                  <Checkbox
+                    checked={!!listFilters.has_ration_card}
+                    onCheckedChange={(c) => toggleFilter("has_ration_card", c === true)}
+                  />
+                  <span className="text-xs text-slate-300">Ration card</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 p-2.5 rounded-lg border border-white/15 hover:border-white/25 hover:bg-white/8 transition-all">
+                  <Checkbox
+                    checked={!!listFilters.has_profile_pic}
+                    onCheckedChange={(c) => toggleFilter("has_profile_pic", c === true)}
+                  />
+                  <span className="text-xs text-slate-300">Profile pic</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 p-2.5 rounded-lg border border-white/15 hover:border-white/25 hover:bg-white/8 transition-all">
+                  <Checkbox
+                    checked={!!listFilters.has_bank_details}
+                    onCheckedChange={(c) => toggleFilter("has_bank_details", c === true)}
+                  />
+                  <span className="text-xs text-slate-300">Bank details</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 p-2.5 rounded-lg border border-white/15 hover:border-white/25 hover:bg-white/8 transition-all">
+                  <Checkbox
+                    checked={!!listFilters.has_document}
+                    onCheckedChange={(c) => toggleFilter("has_document", c === true)}
+                  />
+                  <span className="text-xs text-slate-300">Any document</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 p-2.5 rounded-lg border border-white/15 hover:border-white/25 hover:bg-white/8 transition-all">
+                  <Checkbox
+                    checked={!!listFilters.has_fhc}
+                    onCheckedChange={(c) => toggleFilter("has_fhc", c === true)}
+                  />
+                  <span className="text-xs text-slate-300">FHC</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 p-2.5 rounded-lg border border-white/15 hover:border-white/25 hover:bg-white/8 transition-all">
+                  <Checkbox
+                    checked={!!listFilters.has_shg}
+                    onCheckedChange={(c) => toggleFilter("has_shg", c === true)}
+                  />
+                  <span className="text-xs text-slate-300">SHG</span>
+                </label>
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           {isLoading ? (
