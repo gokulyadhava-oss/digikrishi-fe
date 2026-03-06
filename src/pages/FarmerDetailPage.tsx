@@ -907,7 +907,7 @@ export function FarmerDetailPage() {
           }
         }}
       >
-        <DialogContent className="max-w-7xl max-h-[90vh] flex flex-col p-0 gap-0 w-fit max-w-[95vw]">
+        <DialogContent className="min-w-[min(88vw,80rem)] max-w-[95vw] w-full max-h-[90vh] flex flex-col p-0 gap-0">
           {previewState && (
             <>
               <div className="flex-1 min-h-0 overflow-auto flex justify-center items-start bg-muted/20">
