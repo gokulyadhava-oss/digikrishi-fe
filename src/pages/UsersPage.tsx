@@ -207,11 +207,6 @@ export function UsersPage() {
                 required
               />
             </div>
-            {createMutation.isError && (
-              <p className="text-sm text-destructive">
-                {getErrorMessage(createMutation.error)}
-              </p>
-            )}
             <DialogFooter>
               <Button
                 type="button"

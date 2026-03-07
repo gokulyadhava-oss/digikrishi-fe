@@ -147,9 +147,6 @@ export function AssignFarmersModal({
                 </SelectContent>
               </Select>
             </div>
-            {submitError && (
-              <p className="text-sm text-destructive">{submitError.message}</p>
-            )}
             <DialogFooter className="p-0 justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel

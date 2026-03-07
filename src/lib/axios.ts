@@ -6,9 +6,14 @@ import { useAuthStore } from "@/stores/authStore";
 const host = import.meta.env.VITE_APP_URL ?? import.meta.env.VITE_API_URL ?? "";
 const baseURL = host ? `${String(host).replace(/\/$/, "")}/api` : "/api";
 
+// Allow document/KYC uploads up to 15MB (must match backend multer + Nginx client_max_body_size)
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
 export const api = axios.create({
   baseURL,
   withCredentials: true,
+  maxContentLength: MAX_UPLOAD_BYTES,
+  maxBodyLength: MAX_UPLOAD_BYTES,
   headers: {
     "Content-Type": "application/json",
   },

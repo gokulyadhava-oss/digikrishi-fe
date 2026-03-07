@@ -129,16 +129,10 @@ export function FarmerNewPage() {
               <div className="space-y-2">
                 <Label htmlFor="farmer_code">Farmer code *</Label>
                 <Input id="farmer_code" {...register("farmer_code")} />
-                {errors.farmer_code && (
-                  <p className="text-sm text-destructive">{errors.farmer_code.message}</p>
-                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
                 <Input id="name" {...register("name")} />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name.message}</p>
-                )}
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

@@ -107,6 +107,9 @@ export function FarmerDetailPage() {
   const profileFileInputRef = useRef<HTMLInputElement>(null);
   const documentFileInputRef = useRef<HTMLInputElement>(null);
   const { data: farmer, isLoading, error } = useFarmer(id, activeTab === "details");
+  useEffect(() => {
+    if (error) toast.error(getErrorMessage(error));
+  }, [error]);
   const { data: documents, isLoading: documentsLoading } = useFarmerDocuments(id, activeTab === "documents");
   const { data: plotsRaw = [], isLoading: plotsLoading } = useFarmerPlots(id, activeTab === "plots");
   const [expandedPlotId, setExpandedPlotId] = useState<string | null>(null);
@@ -301,11 +304,7 @@ export function FarmerDetailPage() {
   if (activeTab === "details" && (isLoading || !farmer)) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-4">
-        {error ? (
-          <p className="text-destructive">Failed to load farmer.</p>
-        ) : (
-          <PageLoader />
-        )}
+        <PageLoader />
       </div>
     );
   }
@@ -346,13 +345,13 @@ export function FarmerDetailPage() {
               </span>
             )}
           </div>
-          <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+          <div className="absolute inset-0 z-10 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <Tooltip content={hasProfileKey ? "Re-upload" : "Add photo"}>
               <Button
                 type="button"
                 size="icon"
                 variant="secondary"
-                className="h-8 w-8"
+                className="h-8 w-8 shrink-0"
                 loading={profileUploading}
                 onClick={() => profileFileInputRef.current?.click()}
               >
@@ -365,7 +364,7 @@ export function FarmerDetailPage() {
                   type="button"
                   size="icon"
                   variant="destructive"
-                  className="h-8 w-8"
+                  className="h-8 w-8 shrink-0"
                   disabled={deleteProfileMutation.isPending}
                   onClick={() => id && deleteProfileMutation.mutate(id)}
                 >
@@ -451,16 +450,10 @@ export function FarmerDetailPage() {
               <div className="space-y-2">
                 <Label htmlFor="farmer_code">Farmer code</Label>
                 <Input id="farmer_code" {...register("farmer_code")} />
-                {errors.farmer_code && (
-                  <p className="text-sm text-destructive">{errors.farmer_code.message}</p>
-                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" {...register("name")} />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name.message}</p>
-                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="mobile">Mobile</Label>
@@ -811,7 +804,7 @@ export function FarmerDetailPage() {
                               <TableCell colSpan={6} className="p-0 align-top">
                                 <div className="px-4 pb-4 pt-3 border-t border-white/10 space-y-4">
                                   {/* Plot details - shown when accordion is opened */}
-                                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 md:grid-cols-4">
+                                  <div className="grid grid-cols-2 mt-4 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 md:grid-cols-4">
                                     <div>
                                       <p className="text-xs text-muted-foreground uppercase tracking-wider">Sowing date</p>
                                       <p className="font-medium">
@@ -926,11 +919,12 @@ export function FarmerDetailPage() {
                   />
                 )}
               </div>
-              <div className="flex items-center justify-end gap-2 p-3 border-t border-border bg-muted/30">
+              <div className="flex flex-wrap items-center justify-end gap-2 p-3 border-t border-border bg-muted/30 shrink-0">
                 <Button
                   type="button"
                   variant="destructive"
                   size="sm"
+                  className="shrink-0"
                   onClick={() =>
                     id && deleteDocumentMutation.mutate({ farmerId: id, docType: previewState.docType })
                   }
@@ -943,6 +937,7 @@ export function FarmerDetailPage() {
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="shrink-0"
                   onClick={() => window.open(previewState.url, "_blank")}
                 >
                   <Download className="h-4 w-4 mr-1" />
@@ -951,6 +946,7 @@ export function FarmerDetailPage() {
                 <Button
                   type="button"
                   size="sm"
+                  className="shrink-0"
                   loading={documentUploading}
                   onClick={() => {
                     documentFileInputRef.current?.click();

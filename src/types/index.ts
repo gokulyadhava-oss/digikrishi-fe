@@ -161,6 +161,6 @@ export interface FarmerListFilters {
 
 /** List page: sort column and direction. */
 export interface FarmerListSort {
-  sortBy?: "farmer_code" | "name" | "village" | "district";
+  sortBy?: "farmer_code" | "name" | "village" | "district" | "fpc" | "shg";
   sortOrder?: "asc" | "desc";
 }

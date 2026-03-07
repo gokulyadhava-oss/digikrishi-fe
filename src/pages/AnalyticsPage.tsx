@@ -1,17 +1,13 @@
-import { useState, type ReactNode } from "react";
-// Line and pie charts via Recharts
+import { useMemo, useState, type ReactNode } from "react";
+import { AreaChart, Area, Grid, XAxis, YAxis, ChartTooltip } from "@/components/charts";
+// Pie chart via Recharts (Ration card – no pie in new chart components)
 import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
   Legend,
-  LineChart,
-  Line,
 } from "recharts";
 import {
   useAnalyticsSummary,
@@ -40,13 +36,7 @@ const CHART_COLORS = [
   "var(--chart-6)",
 ];
 
-// Green, modern axis styling
-const AXIS_STROKE = "var(--chart-axis)";
-const GRID_STROKE = "var(--chart-grid)";
-const TICK_STYLE = { fill: "var(--muted-foreground)", fontSize: 11 };
-const AXIS_LINE = { stroke: AXIS_STROKE, strokeWidth: 1.5 };
-
-/** Tooltip styling so chart tooltips respect light/dark theme */
+/** Tooltip styling so chart tooltips respect light/dark theme (Recharts Pie) */
 const CHART_TOOLTIP_STYLE = {
   contentStyle: {
     margin: 0,
@@ -127,6 +117,15 @@ function barData(data: AnalyticsByKey[] | undefined, nameKey: keyof AnalyticsByK
   }));
 }
 
+/** Convert categorical (name, count) to area chart data with sequential dates and keep name for tooltip/labels */
+function categoricalToAreaData(data: { name: string; count: number }[]): { date: Date; count: number; name: string }[] {
+  return data.map((d, i) => ({
+    date: new Date(2020, 0, 1 + i),
+    count: d.count,
+    name: d.name,
+  }));
+}
+
 export function AnalyticsPage() {
   const [locationLimit] = useState(12);
   const [section, setSection] = useState<AnalyticsSection>("location");
@@ -149,6 +148,27 @@ export function AnalyticsPage() {
     name: d.month ?? "—",
     count: d.count,
   }));
+
+  /** Area chart expects date-based x; parse month string (e.g. "2025-01") to Date */
+  const monthChartData = useMemo(() => {
+    return monthData.map((d) => {
+      const monthStr = d.name;
+      let date: Date;
+      const ym = /^(\d{4})-(\d{2})$/.exec(monthStr);
+      if (ym) {
+        date = new Date(parseInt(ym[1], 10), parseInt(ym[2], 10) - 1, 1);
+      } else {
+        date = new Date(monthStr);
+      }
+      return { date, count: d.count };
+    });
+  }, [monthData]);
+
+  const districtChartData = useMemo(() => categoricalToAreaData(districtData), [districtData]);
+  const villageChartData = useMemo(() => categoricalToAreaData(villageData), [villageData]);
+  const talukaChartData = useMemo(() => categoricalToAreaData(talukaData), [talukaData]);
+  const fpcChartData = useMemo(() => categoricalToAreaData(fpcData), [fpcData]);
+  const agentChartData = useMemo(() => categoricalToAreaData(agentData), [agentData]);
 
   const rationPieData = rationStats.data
     ? [
@@ -269,26 +289,43 @@ export function AnalyticsPage() {
                 <CardDescription>Farmers per district (top)</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartBox height={288} hasData={districtData.length > 0} isLoading={byDistrict.isLoading}>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={districtData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                        <XAxis
-                          dataKey="name"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                          tick={{ ...TICK_STYLE, fontSize: 10 }}
-                          tickFormatter={truncateLabel}
-                          axisLine={AXIS_LINE}
-                          tickLine={{ stroke: AXIS_STROKE }}
-                        />
-                        <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                        <Tooltip {...CHART_TOOLTIP_STYLE} />
-                        <Line type="monotone" dataKey="count" stroke={CHART_COLORS[0]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
-                      </LineChart>
-                    </ResponsiveContainer>
+                <ChartBox height={288} hasData={districtChartData.length > 0} isLoading={byDistrict.isLoading}>
+                  <div className="h-72 w-full">
+                    <AreaChart
+                      data={districtChartData}
+                      xDataKey="date"
+                      aspectRatio="2 / 1"
+                      margin={{ top: 20, right: 20, bottom: 48, left: 44 }}
+                    >
+                      <Grid horizontal />
+                      <Area
+                        dataKey="count"
+                        fill="var(--chart-line-primary)"
+                        fillOpacity={0.35}
+                        stroke="var(--chart-line-primary)"
+                        strokeWidth={2}
+                        fadeEdges
+                      />
+                      <YAxis numTicks={5} />
+                      <ChartTooltip
+                        rows={(point) => [
+                          { color: "var(--chart-line-primary)", label: truncateLabel(String(point.name ?? "")), value: String(point.count ?? 0) },
+                        ]}
+                        showDatePill={false}
+                      />
+                    </AreaChart>
+                    <div className="flex justify-between gap-0.5 mt-2 px-0.5 h-12 overflow-visible" style={{ marginLeft: 44 }}>
+                      {districtChartData.map((d, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden max-w-[60px] block origin-bottom-left"
+                          style={{ transform: "rotate(-45deg)", transformOrigin: "bottom left" }}
+                          title={d.name}
+                        >
+                          {truncateLabel(d.name, 8)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </ChartBox>
               </CardContent>
@@ -342,26 +379,43 @@ export function AnalyticsPage() {
                 <CardTitle>By village (top {locationLimit})</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartBox height={288} hasData={villageData.length > 0} isLoading={byVillage.isLoading}>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={villageData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                        <XAxis
-                          dataKey="name"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                          tick={{ ...TICK_STYLE, fontSize: 10 }}
-                          tickFormatter={truncateLabel}
-                          axisLine={AXIS_LINE}
-                          tickLine={{ stroke: AXIS_STROKE }}
-                        />
-                        <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                        <Tooltip {...CHART_TOOLTIP_STYLE} />
-                        <Line type="monotone" dataKey="count" stroke={CHART_COLORS[2]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
-                      </LineChart>
-                    </ResponsiveContainer>
+                <ChartBox height={288} hasData={villageChartData.length > 0} isLoading={byVillage.isLoading}>
+                  <div className="h-72 w-full">
+                    <AreaChart
+                      data={villageChartData}
+                      xDataKey="date"
+                      aspectRatio="2 / 1"
+                      margin={{ top: 20, right: 20, bottom: 48, left: 44 }}
+                    >
+                      <Grid horizontal />
+                      <Area
+                        dataKey="count"
+                        fill="var(--chart-line-primary)"
+                        fillOpacity={0.35}
+                        stroke="var(--chart-line-primary)"
+                        strokeWidth={2}
+                        fadeEdges
+                      />
+                      <YAxis numTicks={5} />
+                      <ChartTooltip
+                        rows={(point) => [
+                          { color: "var(--chart-line-primary)", label: truncateLabel(String(point.name ?? "")), value: String(point.count ?? 0) },
+                        ]}
+                        showDatePill={false}
+                      />
+                    </AreaChart>
+                    <div className="flex justify-between gap-0.5 mt-2 px-0.5 h-12 overflow-visible" style={{ marginLeft: 44 }}>
+                      {villageChartData.map((d, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden max-w-[60px] block origin-bottom-left"
+                          style={{ transform: "rotate(-45deg)", transformOrigin: "bottom left" }}
+                          title={d.name}
+                        >
+                          {truncateLabel(d.name, 8)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </ChartBox>
               </CardContent>
@@ -371,26 +425,43 @@ export function AnalyticsPage() {
                 <CardTitle>By taluka (top {locationLimit})</CardTitle>
               </CardHeader>
               <CardContent>
-                <ChartBox height={288} hasData={talukaData.length > 0} isLoading={byTaluka.isLoading}>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={talukaData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                        <XAxis
-                          dataKey="name"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                          tick={{ ...TICK_STYLE, fontSize: 10 }}
-                          tickFormatter={truncateLabel}
-                          axisLine={AXIS_LINE}
-                          tickLine={{ stroke: AXIS_STROKE }}
-                        />
-                        <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                        <Tooltip {...CHART_TOOLTIP_STYLE} />
-                        <Line type="monotone" dataKey="count" stroke={CHART_COLORS[3]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
-                      </LineChart>
-                    </ResponsiveContainer>
+                <ChartBox height={288} hasData={talukaChartData.length > 0} isLoading={byTaluka.isLoading}>
+                  <div className="h-72 w-full">
+                    <AreaChart
+                      data={talukaChartData}
+                      xDataKey="date"
+                      aspectRatio="2 / 1"
+                      margin={{ top: 20, right: 20, bottom: 48, left: 44 }}
+                    >
+                      <Grid horizontal />
+                      <Area
+                        dataKey="count"
+                        fill="var(--chart-line-primary)"
+                        fillOpacity={0.35}
+                        stroke="var(--chart-line-primary)"
+                        strokeWidth={2}
+                        fadeEdges
+                      />
+                      <YAxis numTicks={5} />
+                      <ChartTooltip
+                        rows={(point) => [
+                          { color: "var(--chart-line-primary)", label: truncateLabel(String(point.name ?? "")), value: String(point.count ?? 0) },
+                        ]}
+                        showDatePill={false}
+                      />
+                    </AreaChart>
+                    <div className="flex justify-between gap-0.5 mt-2 px-0.5 h-12 overflow-visible" style={{ marginLeft: 44 }}>
+                      {talukaChartData.map((d, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden max-w-[60px] block origin-bottom-left"
+                          style={{ transform: "rotate(-45deg)", transformOrigin: "bottom left" }}
+                          title={d.name}
+                        >
+                          {truncateLabel(d.name, 8)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </ChartBox>
               </CardContent>
@@ -414,26 +485,43 @@ export function AnalyticsPage() {
                 <CardDescription>Farmer Producer Company</CardDescription>
               </CardHeader>
               <CardContent>
-                <ChartBox height={288} hasData={fpcData.length > 0} isLoading={byFpc.isLoading}>
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={fpcData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                        <XAxis
-                          dataKey="name"
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
-                          tick={{ ...TICK_STYLE, fontSize: 10 }}
-                          tickFormatter={truncateLabel}
-                          axisLine={AXIS_LINE}
-                          tickLine={{ stroke: AXIS_STROKE }}
-                        />
-                        <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                        <Tooltip {...CHART_TOOLTIP_STYLE} />
-                        <Line type="monotone" dataKey="count" stroke={CHART_COLORS[4]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
-                      </LineChart>
-                    </ResponsiveContainer>
+                <ChartBox height={288} hasData={fpcChartData.length > 0} isLoading={byFpc.isLoading}>
+                  <div className="h-72 w-full">
+                    <AreaChart
+                      data={fpcChartData}
+                      xDataKey="date"
+                      aspectRatio="2 / 1"
+                      margin={{ top: 20, right: 20, bottom: 48, left: 44 }}
+                    >
+                      <Grid horizontal />
+                      <Area
+                        dataKey="count"
+                        fill="var(--chart-line-primary)"
+                        fillOpacity={0.35}
+                        stroke="var(--chart-line-primary)"
+                        strokeWidth={2}
+                        fadeEdges
+                      />
+                      <YAxis numTicks={5} />
+                      <ChartTooltip
+                        rows={(point) => [
+                          { color: "var(--chart-line-primary)", label: truncateLabel(String(point.name ?? "")), value: String(point.count ?? 0) },
+                        ]}
+                        showDatePill={false}
+                      />
+                    </AreaChart>
+                    <div className="flex justify-between gap-0.5 mt-2 px-0.5 h-12 overflow-visible" style={{ marginLeft: 44 }}>
+                      {fpcChartData.map((d, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden max-w-[60px] block origin-bottom-left"
+                          style={{ transform: "rotate(-45deg)", transformOrigin: "bottom left" }}
+                          title={d.name}
+                        >
+                          {truncateLabel(d.name, 8)}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </ChartBox>
               </CardContent>
@@ -480,26 +568,43 @@ export function AnalyticsPage() {
               <CardDescription>Farmers assigned per agent</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartBox height={288} hasData={agentData.length > 0} isLoading={byAgent.isLoading}>
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={agentData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                      <XAxis
-                        dataKey="name"
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        tick={{ ...TICK_STYLE, fontSize: 10 }}
-                        tickFormatter={truncateLabel}
-                        axisLine={AXIS_LINE}
-                        tickLine={{ stroke: AXIS_STROKE }}
-                      />
-                      <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                      <Tooltip {...CHART_TOOLTIP_STYLE} />
-                      <Line type="monotone" dataKey="count" stroke={CHART_COLORS[5]} strokeWidth={2} dot={{ r: 4 }} name="Farmers" />
-                    </LineChart>
-                  </ResponsiveContainer>
+              <ChartBox height={288} hasData={agentChartData.length > 0} isLoading={byAgent.isLoading}>
+                <div className="h-72 w-full">
+                  <AreaChart
+                    data={agentChartData}
+                    xDataKey="date"
+                    aspectRatio="2 / 1"
+                    margin={{ top: 20, right: 20, bottom: 48, left: 44 }}
+                  >
+                    <Grid horizontal />
+                    <Area
+                      dataKey="count"
+                      fill="var(--chart-line-primary)"
+                      fillOpacity={0.35}
+                      stroke="var(--chart-line-primary)"
+                      strokeWidth={2}
+                      fadeEdges
+                    />
+                    <YAxis numTicks={5} />
+                    <ChartTooltip
+                      rows={(point) => [
+                        { color: "var(--chart-line-primary)", label: truncateLabel(String(point.name ?? "")), value: String(point.count ?? 0) },
+                      ]}
+                      showDatePill={false}
+                    />
+                  </AreaChart>
+                  <div className="flex justify-between gap-0.5 mt-2 px-0.5 h-12 overflow-visible" style={{ marginLeft: 44 }}>
+                    {agentChartData.map((d, i) => (
+                      <span
+                        key={i}
+                        className="text-[10px] text-muted-foreground whitespace-nowrap overflow-hidden max-w-[60px] block origin-bottom-left"
+                        style={{ transform: "rotate(-45deg)", transformOrigin: "bottom left" }}
+                        title={d.name}
+                      >
+                        {truncateLabel(d.name, 8)}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </ChartBox>
             </CardContent>
@@ -515,24 +620,35 @@ export function AnalyticsPage() {
               <CardDescription>New farmers created per month (from created_at)</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartBox height={384} hasData={monthData.length > 0} isLoading={byMonth.isLoading}>
-                <div className="h-96">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthData} margin={{ top: 20, right: 20, left: 0, bottom: 40 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
-                      <XAxis dataKey="name" tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                      <YAxis tick={TICK_STYLE} axisLine={AXIS_LINE} tickLine={{ stroke: AXIS_STROKE }} />
-                      <Tooltip {...CHART_TOOLTIP_STYLE} />
-                      <Line
-                        type="monotone"
-                        dataKey="count"
-                        stroke={CHART_COLORS[0]}
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        name="Farmers"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+              <ChartBox height={384} hasData={monthChartData.length > 0} isLoading={byMonth.isLoading}>
+                <div className="h-96 w-full">
+                  <AreaChart
+                    data={monthChartData}
+                    xDataKey="date"
+                    aspectRatio="2 / 1"
+                    margin={{ top: 20, right: 20, bottom: 52, left: 44 }}
+                  >
+                    <Grid horizontal />
+                    <Area
+                      dataKey="count"
+                      fill="var(--chart-line-primary)"
+                      fillOpacity={0.35}
+                      stroke="var(--chart-line-primary)"
+                      strokeWidth={2}
+                      fadeEdges
+                    />
+                    <XAxis numTicks={6} />
+                    <YAxis numTicks={5} />
+                    <ChartTooltip
+                      rows={(point) => [
+                        {
+                          color: "var(--chart-line-primary)",
+                          label: "Farmers",
+                          value: String(point.count ?? 0),
+                        },
+                      ]}
+                    />
+                  </AreaChart>
                 </div>
               </ChartBox>
             </CardContent>

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { useAuthStore } from "@/stores/authStore";
 import { useUiStore } from "@/stores/uiStore";
 import { login, fetchMe } from "@/api/auth";
+import { toast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,8 +48,7 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
-    setError,
-    formState: { errors, isSubmitting },
+    formState: { isSubmitting },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -70,13 +70,14 @@ export function LoginPage() {
       );
       const { user } = await fetchMe();
       setAuth(user);
+      toast.success("Login successful");
       navigate(from, { replace: true });
     } catch (err: unknown) {
       const message =
         err && typeof err === "object" && "response" in err
           ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
           : "Login failed";
-      setError("root", { message: message ?? "Invalid email or password" });
+      toast.error(message ?? "Invalid email or password");
     }
   }
 
@@ -123,9 +124,6 @@ export function LoginPage() {
               className="space-y-5"
               autoComplete="on"
             >
-              {errors.root && (
-                <p className="text-sm text-destructive">{errors.root.message}</p>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -136,9 +134,6 @@ export function LoginPage() {
                   className="h-11"
                   {...register("email")}
                 />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
-                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
@@ -166,9 +161,6 @@ export function LoginPage() {
                     )}
                   </Button>
                 </div>
-                {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
-                )}
               </div>
               <Button type="submit" className="h-11 w-full text-base" loading={isSubmitting}>
                 Sign in

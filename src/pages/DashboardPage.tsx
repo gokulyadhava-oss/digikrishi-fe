@@ -1,11 +1,18 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAnalyticsSummary } from "@/hooks/useAnalytics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageLoader } from "@/components/ui/loader";
+import { toast } from "@/lib/toast";
+import { getErrorMessage } from "@/lib/utils";
 import { Users, Upload, BarChart3 } from "lucide-react";
 
 export function DashboardPage() {
   const { data: summary, isLoading, error } = useAnalyticsSummary();
+
+  useEffect(() => {
+    if (error) toast.error(getErrorMessage(error));
+  }, [error]);
 
   return (
     <div className="space-y-6">
@@ -13,10 +20,6 @@ export function DashboardPage() {
         <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
         <p className="text-muted-foreground">Overview of your farmers and activity</p>
       </div>
-
-      {error && (
-        <p className="text-sm text-destructive">Failed to load summary. You may need to re-login.</p>
-      )}
 
       {isLoading ? (
         <PageLoader />

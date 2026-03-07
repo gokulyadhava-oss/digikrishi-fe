@@ -48,12 +48,16 @@ function getInitialBounds(coordinates: PlotCoordinate[]) {
   };
 }
 
+/** Assam: 1 bigha = 0.33 acres (approx). Bigha from acres. */
+const ACRES_PER_BIGHA = 0.33;
+
 /**
- * Format area in multiple units
+ * Format area in multiple units (Bigha, Acres, Hectares). Bigha computed in frontend.
  */
 function formatArea(map: PlotMapRecord) {
+  const bigha = map.area_acres / ACRES_PER_BIGHA;
   return {
-    m2: map.area_m2.toFixed(2),
+    bigha: bigha.toFixed(2),
     acres: map.area_acres.toFixed(2),
     hectares: map.area_hectares.toFixed(2),
   };
@@ -98,13 +102,13 @@ export function PlotMapViewer({ plotMaps, isLoading = false, farmerId, plotId }:
 
   if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === "YOUR_GOOGLE_MAPS_API_KEY_HERE") {
     return (
-      <Card className="border-destructive/50 bg-destructive/5">
+      <Card>
         <CardHeader>
           <CardTitle>Plot Maps</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="py-12 text-center space-y-2">
-            <p className="text-destructive font-medium">Google Maps API Key Missing</p>
+            <p className="text-muted-foreground font-medium">Google Maps API Key Missing</p>
             <p className="text-sm text-muted-foreground">
               Please add your Google Maps API key to the <code className="bg-muted px-2 py-1 rounded">.env</code> file:
             </p>
@@ -172,10 +176,10 @@ export function PlotMapViewer({ plotMaps, isLoading = false, farmerId, plotId }:
 
   if (scriptLoadError) {
     return (
-      <Card className="border-destructive/50 bg-destructive/5">
+      <Card>
         <CardContent className="py-6 text-center">
-          <p className="text-destructive font-medium">Failed to load map</p>
-          <p className="text-sm text-muted-foreground mt-1">{String(scriptLoadError.message)}</p>
+          <p className="text-muted-foreground font-medium">Map unavailable</p>
+          <p className="text-sm text-muted-foreground mt-1">Failed to load map script.</p>
         </CardContent>
       </Card>
     );
@@ -207,7 +211,7 @@ export function PlotMapViewer({ plotMaps, isLoading = false, farmerId, plotId }:
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <MapIcon className="h-5 w-5" />
+
                 {currentMapForDisplay.name}
               </CardTitle>
               {currentMapForDisplay.created_at && (
@@ -216,6 +220,8 @@ export function PlotMapViewer({ plotMaps, isLoading = false, farmerId, plotId }:
                 </p>
               )}
             </div>
+
+            
             <div className="flex gap-2">
               <Button
                 variant={mapType === "roadmap" ? "default" : "outline"}
@@ -233,6 +239,25 @@ export function PlotMapViewer({ plotMaps, isLoading = false, farmerId, plotId }:
               >
                 <Satellite className="h-4 w-4" />
               </Button>
+            </div>
+            
+          </div>
+            {/* Area Information */}
+            <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Bigha</p>
+              <p className="text-lg font-bold text-white">{area.bigha}</p>
+              <p className="text-xs text-muted-foreground">bigha</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Acres</p>
+              <p className="text-lg font-bold text-white">{area.acres}</p>
+              <p className="text-xs text-muted-foreground">acres</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+              <p className="text-xs text-muted-foreground mb-1">Hectares</p>
+              <p className="text-lg font-bold text-white">{area.hectares}</p>
+              <p className="text-xs text-muted-foreground">hectares</p>
             </div>
           </div>
         </CardHeader>
@@ -358,53 +383,8 @@ export function PlotMapViewer({ plotMaps, isLoading = false, farmerId, plotId }:
             </div>
           )}
 
-          {/* Area Information */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Square Meters</p>
-              <p className="text-lg font-bold text-white">{area.m2}</p>
-              <p className="text-xs text-muted-foreground">m²</p>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Acres</p>
-              <p className="text-lg font-bold text-white">{area.acres}</p>
-              <p className="text-xs text-muted-foreground">acres</p>
-            </div>
-            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
-              <p className="text-xs text-muted-foreground mb-1">Hectares</p>
-              <p className="text-lg font-bold text-white">{area.hectares}</p>
-              <p className="text-xs text-muted-foreground">hectares</p>
-            </div>
-          </div>
+        
 
-          {/* Plot Details */}
-          <div className="rounded-lg border border-white/10 bg-white/5 p-4 space-y-3">
-            <h3 className="font-semibold text-sm">Plot Details</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Points Recorded:</span>
-                <Badge variant="outline">{currentMapForDisplay.coordinates.length}</Badge>
-              </div>
-              {currentMapForDisplay.gps_path && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">GPS Path Points:</span>
-                  <Badge variant="outline">{currentMapForDisplay.gps_path.length}</Badge>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Recording Method:</span>
-                <Badge variant="outline">{currentMapForDisplay.gps_path ? "GPS Walk" : "Manual"}</Badge>
-              </div>
-              {currentMapForDisplay.value && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Estimated Value:</span>
-                  <span className="font-medium">
-                    {currentMapForDisplay.currency || "INR"} {Number(currentMapForDisplay.value).toFixed(2)}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
 
      
         </CardContent>

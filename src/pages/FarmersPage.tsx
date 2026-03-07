@@ -31,7 +31,8 @@ import type { FarmerListSort } from "@/types";
 const SORT_COLUMNS: { key: FarmerListSort["sortBy"]; label: string }[] = [
   { key: "farmer_code", label: "Code" },
   { key: "name", label: "Name" },
-  { key: "village", label: "Village / District" },
+  { key: "fpc", label: "FPC" },
+  { key: "shg", label: "SHG" },
 ];
 
 export function FarmersPage() {
@@ -109,7 +110,7 @@ export function FarmersPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name or farmer code"
+                placeholder="Search by name, farmer code or phone"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -295,13 +296,8 @@ export function FarmersPage() {
                     <TableRow key={f.id}>
                       <TableCell className="font-medium">{f.farmer_code}</TableCell>
                       <TableCell>{f.name}</TableCell>
-                      <TableCell>
-                        {f.FarmerAddress
-                          ? [f.FarmerAddress.village, f.FarmerAddress.district]
-                              .filter(Boolean)
-                              .join(" / ") || "—"
-                          : "—"}
-                      </TableCell>
+                      <TableCell className="text-muted-foreground">{f.FarmerProfileDetail?.fpc ?? "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{f.FarmerProfileDetail?.shg ?? "—"}</TableCell>
                       <TableCell>
                         <Link to={`/farmers/${f.id}`}>
                           <Button variant="ghost" size="sm">

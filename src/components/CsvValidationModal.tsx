@@ -300,7 +300,7 @@ export function CsvValidationModal({
         {/* ── Footer ── */}
         <DialogFooter className="px-6 py-4 border-t border-border bg-muted/10 flex-wrap gap-2">
           {!canUpload && (
-            <p className="text-sm text-destructive flex-1 flex items-center gap-1">
+            <p className="text-sm text-muted-foreground flex-1 flex items-center gap-1">
               <XCircle className="h-4 w-4 shrink-0" />
               Required column{missingRequiredAfterReject.length > 1 ? "s" : ""} missing or rejected:{" "}
               <strong>{missingRequiredAfterReject.join(", ")}</strong>
