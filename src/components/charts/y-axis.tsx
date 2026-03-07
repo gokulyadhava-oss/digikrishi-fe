@@ -30,7 +30,9 @@ export function YAxis({ numTicks = 5 }: YAxisProps) {
   }, []);
 
   const ticks = useMemo(() => {
-    const domain = (yScale as { domain?: () => [number, number] }).domain?.() ?? [0, 100];
+    const d = (yScale as unknown as { domain?: () => number[] }).domain?.();
+    const domain: [number, number] =
+      d && d.length >= 2 ? [d[0], d[1]] : [0, 100];
     return getTicks(domain, numTicks);
   }, [yScale, numTicks]);
 

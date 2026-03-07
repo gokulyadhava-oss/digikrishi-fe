@@ -54,7 +54,7 @@ export function FarmerNewPage() {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: {},
   } = useForm<FarmerForm>({
     resolver: zodResolver(farmerSchema),
     defaultValues: {

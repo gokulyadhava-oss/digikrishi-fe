@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useJsApiLoader } from "@react-google-maps/api";
 import { GoogleMap, Polygon as GooglePolygon, Polyline as GooglePolyline, Marker, InfoWindow } from "@react-google-maps/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageLoader } from "@/components/ui/loader";
 import { Map as MapIcon, Satellite } from "lucide-react";

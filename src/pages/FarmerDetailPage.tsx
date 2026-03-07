@@ -149,7 +149,7 @@ export function FarmerDetailPage() {
     setValue,
     reset,
     control,
-    formState: { errors, isDirty },
+    formState: { isDirty },
   } = useForm<FarmerForm>({
     resolver: zodResolver(farmerSchema),
   });

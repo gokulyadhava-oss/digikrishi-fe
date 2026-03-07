@@ -50,7 +50,7 @@ export function AssignFarmersModal({
   onAgentIdChange,
   onSubmit,
   isSubmitting,
-  submitError,
+  submitError: _submitError,
 }: AssignFarmersModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
