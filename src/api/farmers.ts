@@ -67,6 +67,11 @@ export async function assignFarmerToAgent(farmerId: string, agentId: string | nu
   return data;
 }
 
+export async function generateFarmerOtp(farmerId: string): Promise<{ otp: string }> {
+  const { data } = await api.post<{ otp: string }>(`/farmers/${farmerId}/generate-otp`);
+  return data;
+}
+
 // Profile & document (S3) – download URL, delete
 export async function getProfileDownloadUrl(farmerId: string): Promise<{ url: string }> {
   const { data } = await api.get<{ url: string }>(`/farmers/${farmerId}/profile/download-url`);

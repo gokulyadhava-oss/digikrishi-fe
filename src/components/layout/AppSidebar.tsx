@@ -18,7 +18,7 @@ const navItems = [
   { to: "/farmers", label: "Farmers", icon: Users },
   { to: "/csv-upload", label: "CSV Upload", icon: Upload },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/users", label: "Field Officers", icon: UserCog },
+  { to: "/agent", label: "Agents", icon: UserCog },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -34,7 +34,7 @@ export function AppSidebar() {
       : navItems.filter(
           (item) =>
             item.to !== "/csv-upload" &&
-            item.to !== "/users"
+            item.to !== "/agent"
         );
 
   return (

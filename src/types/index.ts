@@ -78,6 +78,7 @@ export interface Farmer {
   is_activated: boolean;
   created_by_agent_id: string | null;
   profile_pic_url?: string | null;
+  otp?: string | null;
   created_at: string;
   updated_at: string;
   FarmerAddress?: FarmerAddress | null;

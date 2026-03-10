@@ -12,7 +12,8 @@ import { FarmerNewPage } from "@/pages/FarmerNewPage";
 import { FarmerDetailPage } from "@/pages/FarmerDetailPage";
 import { CsvUploadPage } from "@/pages/CsvUploadPage";
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
-import { UsersPage } from "@/pages/UsersPage";
+import { AgentsPage } from "@/pages/UsersPage";
+import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { Toaster } from "@/components/ui/toast";
 
@@ -43,7 +44,8 @@ function ProtectedRoutes() {
             }
           />
           <Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="users" element={<UsersPage />} />
+          <Route path="agent" element={<AgentsPage />} />
+          <Route path="agent/:id" element={<AgentDetailPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -64,3 +64,19 @@ export async function createFieldOfficer(body: CreateFieldOfficerBody): Promise<
   const { data } = await api.post("/auth/field-officers", body);
   return data;
 }
+
+export interface AgentWithFarmers {
+  agent: FieldOfficer;
+  farmers: Array<{
+    id: string;
+    farmer_code: string;
+    name: string;
+    fpc: string | null;
+    otp: string | null;
+  }>;
+}
+
+export async function fetchAgentById(id: string): Promise<AgentWithFarmers> {
+  const { data } = await api.get<AgentWithFarmers>(`/auth/field-officers/${id}`);
+  return data;
+}

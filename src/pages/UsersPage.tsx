@@ -29,9 +29,11 @@ import { useAssignFarmerToAgent } from "@/hooks/useFarmers";
 import { searchFarmers } from "@/api/search";
 import { PageLoader } from "@/components/ui/loader";
 import { AssignFarmersModal } from "@/components/AssignFarmersModal";
-import { UserPlus, UserCog, Link2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { UserPlus, UserCog, Link2, Eye } from "lucide-react";
 
-export function UsersPage() {
+export function AgentsPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isTenant = user?.role === "TENANT";
 
@@ -65,7 +67,7 @@ export function UsersPage() {
           setNewEmail("");
           setNewPassword("");
           setAddOfficerModalOpen(false);
-          toast.success(data?.message ?? "Field officer created");
+          toast.success(data?.message ?? "Agent created");
         },
         onError: (err) => toast.error(getErrorMessage(err)),
       }
@@ -108,16 +110,16 @@ export function UsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Field officers</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Agents</h2>
           <p className="text-muted-foreground">
-            Tenant: <span className="font-medium text-foreground">{user?.Tenant?.name ?? "—"}</span>. Manage field officers and assign farmers to them.
+            Tenant: <span className="font-medium text-foreground">{user?.Tenant?.name ?? "—"}</span>. Manage agents and assign farmers to them.
           </p>
         </div>
         {isTenant && (
           <div className="flex flex-wrap gap-2 shrink-0">
             <Button onClick={() => setAddOfficerModalOpen(true)}>
               <UserPlus className="mr-2 h-4 w-4" />
-              Add field officer
+              Add agent
             </Button>
             <Button onClick={openAssignModal} variant="outline">
               <Link2 className="mr-2 h-4 w-4" />
@@ -127,15 +129,15 @@ export function UsersPage() {
         )}
       </div>
 
-      {/* List field officers */}
+      {/* List agents */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserCog className="h-5 w-5" />
-            Field officers
+            Agents
           </CardTitle>
           <CardDescription>
-            Agents linked to your tenant. Only tenants can add new officers and assign farmers.
+            Agents linked to your tenant. Only tenants can add new agents and assign farmers.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -143,7 +145,7 @@ export function UsersPage() {
             <PageLoader />
           ) : officers.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">
-              No field officers yet. Add one below (tenant only).
+              No agents yet. Add one below (tenant only).
             </p>
           ) : (
             <Table>
@@ -152,6 +154,7 @@ export function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Mobile</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="w-[100px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -164,6 +167,12 @@ export function UsersPage() {
                         {o.is_active ? "Active" : "Inactive"}
                       </span>
                     </TableCell>
+                    <TableCell>
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/agent/${o.id}`)}>
+                        <Eye className="mr-1 h-4 w-4" />
+                        View
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -172,16 +181,16 @@ export function UsersPage() {
         </CardContent>
       </Card>
 
-      {/* Add field officer modal */}
+      {/* Add agent modal */}
       <Dialog open={addOfficerModalOpen} onOpenChange={setAddOfficerModalOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Add field officer
+              Add agent
             </DialogTitle>
             <DialogDescription>
-              Create a new field officer (agent) for your tenant.
+              Create a new agent for your tenant.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleCreate} className="flex flex-col gap-4">
@@ -216,7 +225,7 @@ export function UsersPage() {
                 Cancel
               </Button>
               <Button type="submit" loading={createMutation.isPending}>
-                Create field officer
+                Create agent
               </Button>
             </DialogFooter>
           </form>
