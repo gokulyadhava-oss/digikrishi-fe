@@ -39,12 +39,13 @@ import { PageLoader } from "@/components/ui/loader";
 import { DotLoader } from "@/components/ui/dot-loader";
 import { getErrorMessage } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, FileImage, FileText, CreditCard, Trash2, Download, Upload, Pencil, ChevronDown, ChevronRight, MapPin } from "lucide-react";
+import { ArrowLeft, FileImage, FileText, CreditCard, Trash2, Download, Upload, Pencil, ChevronDown, ChevronRight, MapPin, Sparkles } from "lucide-react";
 import { CascadingDropdownModal } from "@/components/cascading-dropdown-modal";
 import { Map as MapIcon } from "lucide-react";
 import { PlotMapViewer } from "@/components/PlotMapViewer";
+import { fetchPlotAdvisories, type PlotAdvisoriesResponse } from "@/api/advisory";
 
-type TabId = "details" | "documents" | "plots";
+type TabId = "details" | "documents" | "plots" | "advisory";
 
 const farmerSchema = z.object({
   farmer_code: z.string().min(1),
@@ -90,6 +91,179 @@ function formatCreatedAt(iso: string | undefined): string {
     minute: "2-digit",
     hour12: true,
   });
+}
+
+/** Assam: 1 bigha = 0.33 acres (approx). Bigha from acres. */
+const ACRES_PER_BIGHA = 0.33;
+
+function formatLandSize(landSizeValue: string | null | undefined, units: string | null | undefined) {
+  if (!landSizeValue) return "—";
+  const raw = Number(landSizeValue);
+  if (!isFinite(raw) || raw <= 0) return `${landSizeValue} ${units ?? ""}`.trim();
+
+  const unit = (units ?? "").toLowerCase();
+
+  let acres = raw;
+  if (unit === "bigha") {
+    const bigha = raw;
+    const acresFromBigha = bigha * ACRES_PER_BIGHA;
+    return `${bigha.toFixed(2)} bigha (${acresFromBigha.toFixed(2)} acre)`;
+  }
+  if (unit === "hectare" || unit === "hectares") {
+    acres = raw * 2.47105;
+  } else if (unit === "guntha" || unit === "gunta") {
+    acres = raw / 40;
+  }
+
+  const bigha = acres / ACRES_PER_BIGHA;
+  return `${bigha.toFixed(2)} bigha (${acres.toFixed(2)} acre${acres !== 1 ? "s" : ""})`;
+}
+
+interface AdvisorySectionProps {
+  farmerId: string | undefined;
+  plots: Array<{
+    id: string;
+    variety: string;
+    sowing_date: string;
+  }>;
+  expandedPlotId: string | null;
+}
+
+function AdvisorySection({ farmerId, plots, expandedPlotId }: AdvisorySectionProps) {
+  const activePlot =
+    plots.find((p) => p.id === expandedPlotId) ??
+    plots[0];
+
+  const { data, isLoading, error } = useQuery<PlotAdvisoriesResponse>({
+    queryKey: ["farmer", farmerId, "plot", activePlot?.id, "advisories"],
+    queryFn: () => fetchPlotAdvisories(farmerId!, activePlot!.id),
+    enabled: !!farmerId && !!activePlot,
+  });
+
+  if (!activePlot) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <PageLoader />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <p className="text-sm text-destructive">
+        Failed to load advisory for this plot.
+      </p>
+    );
+  }
+
+  const { days_since_sowing, advisories } = data;
+  const current = advisories.filter((a) => a.is_current_period);
+  const others = advisories.filter((a) => !a.is_current_period);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Plot advisory
+          </p>
+          <p className="text-sm font-medium">
+            Variety: <span className="font-semibold">{activePlot.variety || "—"}</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Sowing date:{" "}
+            {activePlot.sowing_date
+              ? new Date(activePlot.sowing_date).toLocaleDateString()
+              : "—"}
+          </p>
+        </div>
+        {days_since_sowing != null && (
+          <div className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm">
+            <span className="font-semibold text-primary">
+              {days_since_sowing} days
+            </span>{" "}
+            <span className="text-primary/80">since sowing</span>
+          </div>
+        )}
+      </div>
+
+      {advisories.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No advisories available for this plot yet.
+        </p>
+      ) : (
+        <div className="space-y-6">
+          {current.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                Active right now
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {current.map((a) => (
+                  <div
+                    key={a.id}
+                    className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-2"
+                  >
+                    <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wide">
+                      {a.stage_name}
+                    </p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {a.activity}
+                    </p>
+                    {a.start_day != null && a.end_day != null && (
+                      <p className="text-xs text-emerald-100">
+                        Day {a.start_day}
+                        {a.end_day !== a.start_day ? `–${a.end_day}` : ""} after sowing
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {others.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Full crop timeline
+              </p>
+              <div className="space-y-2">
+                {others.map((a) => (
+                  <div
+                    key={a.id}
+                    className="rounded-md border border-border/60 bg-muted/40 px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          {a.stage_name}
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {a.activity}
+                        </p>
+                      </div>
+                      {a.start_day != null && (
+                        <p className="text-xs text-muted-foreground">
+                          Day {a.start_day}
+                          {a.end_day != null && a.end_day !== a.start_day
+                            ? `–${a.end_day}`
+                            : ""}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function FarmerDetailPage() {
@@ -311,9 +485,10 @@ export function FarmerDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <Link to="/farmers">
-          <Button variant="ghost" size="icon">
+      {/* Header: back, avatar, name/code, badge, actions */}
+      <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+        <Link to="/farmers" className="shrink-0" aria-label="Back to farmers">
+          <Button variant="ghost" size="icon" className="h-9 w-9">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
@@ -328,8 +503,8 @@ export function FarmerDetailPage() {
             e.target.value = "";
           }}
         />
-        <div className="relative group h-28 w-28 shrink-0 sm:h-32 sm:w-32">
-          <div className="h-full w-full overflow-hidden rounded-full bg-muted flex items-center justify-center">
+        <div className="relative group h-24 w-24 shrink-0 sm:h-28 sm:w-28">
+          <div className="h-full w-full overflow-hidden rounded-full bg-muted flex items-center justify-center border border-border">
             {displayPicUrl ? (
               <img
                 src={displayPicUrl}
@@ -338,7 +513,7 @@ export function FarmerDetailPage() {
               />
             ) : (
               <span
-                className="flex h-full w-full items-center justify-center text-3xl font-semibold text-muted-foreground sm:text-4xl"
+                className="flex h-full w-full items-center justify-center text-2xl font-semibold text-muted-foreground sm:text-3xl"
                 aria-hidden
               >
                 {getInitials(farmer?.name)}
@@ -374,23 +549,23 @@ export function FarmerDetailPage() {
             )}
           </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-2xl font-bold tracking-tight">{farmer?.name ?? "Farmer"}</h2>
-          <p className="text-muted-foreground">{farmer?.farmer_code ?? id}</p>
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl truncate">{farmer?.name ?? "Farmer"}</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">{farmer?.farmer_code ?? id}</p>
         </div>
         {farmer && (
-          <>
+          <div className="shrink-0">
             <Tooltip content={farmer.is_activated ? "Farmer account is active" : "Farmer account is inactive (deactivated)"}>
               <Badge
-                className={farmer.is_activated ? "border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-600/90" : "border-muted-foreground/30 bg-muted text-muted-foreground"}
+                className={farmer.is_activated ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90" : "border-muted-foreground/30 bg-muted text-muted-foreground"}
               >
                 {farmer.is_activated ? "Active" : "Inactive"}
               </Badge>
             </Tooltip>
-          </>
+          </div>
         )}
         {activeTab === "details" && farmer && (
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
             <Link to="/farmers">
               <Button type="button" variant="outline">Cancel</Button>
             </Link>
@@ -402,42 +577,45 @@ export function FarmerDetailPage() {
             >
               Save changes
             </Button>
-            </div>
+          </div>
         )}
       </div>
 
-      <div className="flex gap-3 border-b border-border pb-3 overflow-x-auto">
-        <Button
-          type="button"
-          variant={activeTab === "details" ? "default" : "ghost"}
-          size="lg"
-          className="px-6 py-6 text-base gap-2"
-          onClick={() => setActiveTab("details")}
-        >
-          <FileText className="h-6 w-6" />
-          Details
-        </Button>
-        <Button
-          type="button"
-          variant={activeTab === "documents" ? "default" : "ghost"}
-          size="lg"
-          className="px-6 py-6 text-base gap-2"
-          onClick={() => setActiveTab("documents")}
-        >
-          <CreditCard className="h-6 w-6" />
-          Documents
-        </Button>
-        <Button
-          type="button"
-          variant={activeTab === "plots" ? "default" : "ghost"}
-          size="lg"
-          className="px-6 py-6 text-base gap-2"
-          onClick={() => setActiveTab("plots")}
-        >
-          <MapIcon className="h-6 w-6" />
-          Plots
-        </Button>
-      </div>
+      <nav
+        className="flex border-b border-border"
+        role="tablist"
+        aria-label="Farmer sections"
+      >
+        {[
+          { id: "details" as TabId, label: "Details", icon: FileText },
+          { id: "documents" as TabId, label: "Documents", icon: CreditCard },
+          { id: "plots" as TabId, label: "Plots", icon: MapIcon },
+          { id: "advisory" as TabId, label: "Advisory", icon: Sparkles },
+        ].map(({ id, label, icon: Icon }) => {
+          const isActive = activeTab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => setActiveTab(id)}
+              className={`
+                flex-1 min-w-0 flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 px-4
+                text-sm font-medium transition-colors rounded-t-lg
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+                ${isActive
+                  ? "bg-muted/50 text-foreground border-b-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/30 border-b-2 border-transparent"
+                }
+              `}
+            >
+              <Icon className="h-5 w-5 shrink-0" aria-hidden />
+              <span className="text-center">{label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
       {activeTab === "details" && farmer && (
       <form id="farmer-detail-form" onSubmit={handleSubmit(onSubmit)}>
@@ -478,6 +656,36 @@ export function FarmerDetailPage() {
                     />
                   )}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Agent</Label>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-md border border-input bg-muted/30 px-3 py-2 text-sm">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+                      Assigned agent
+                    </span>
+                    {farmer.FarmerAgentMaps && farmer.FarmerAgentMaps.length > 0 && farmer.FarmerAgentMaps[0].Agent ? (
+                      <span className="font-medium">
+                        {farmer.FarmerAgentMaps[0].Agent.email ?? "Agent"}{" "}
+                        {farmer.FarmerAgentMaps[0].Agent.mobile
+                          ? `· ${farmer.FarmerAgentMaps[0].Agent.mobile}`
+                          : ""}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Not assigned</span>
+                    )}
+                  </div>
+                  {farmer.FarmerAgentMaps && farmer.FarmerAgentMaps[0]?.Agent?.id && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/agent/${farmer.FarmerAgentMaps![0]!.Agent!.id}`)}
+                    >
+                      View agent
+                    </Button>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -776,12 +984,12 @@ export function FarmerDetailPage() {
                             </TableCell>
                             <TableCell className="font-medium">{plot.variety || "—"}</TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="border-emerald-500/40 text-emerald-400">
+                              <Badge variant="outline" className="border-primary/40 text-primary">
                                 {plot.season || "—"}
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {plot.land_size_value} {plot.units}
+                              {formatLandSize(plot.land_size_value, plot.units)}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
                               {formatCreatedAt(plot.created_at)}
@@ -871,6 +1079,34 @@ export function FarmerDetailPage() {
                   </TableBody>
                 </Table>
               </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "advisory" && (
+        <Card className="w-full max-w-6xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Advisory
+            </CardTitle>
+            <CardDescription>
+              Crop advisory for the plots recorded for this farmer, based on days since sowing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {plotsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <PageLoader />
+              </div>
+            ) : !plots || plots.length === 0 ? (
+              <div className="py-12 text-center">
+                <MapIcon className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">No plots recorded yet – advisories will appear once plots are added.</p>
+              </div>
+            ) : (
+              <AdvisorySection farmerId={id} plots={plots} expandedPlotId={expandedPlotId} />
             )}
           </CardContent>
         </Card>

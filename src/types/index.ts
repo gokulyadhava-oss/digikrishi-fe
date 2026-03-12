@@ -156,6 +156,8 @@ export interface FarmerListFilters {
   has_document?: boolean;
   has_fhc?: boolean;
   has_shg?: boolean;
+  /** True: only farmers with GIS (plot map) data */
+  has_gis?: boolean;
   fpc?: string | null;
   shg?: string | null;
 }

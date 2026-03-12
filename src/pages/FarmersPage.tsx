@@ -210,7 +210,7 @@ export function FarmersPage() {
           {advancedOpen && (
             <div className="border-t border-white/10 pt-4 mt-4">
               <p className="mb-3 text-xs font-semibold text-white uppercase tracking-wider">Show farmers who have</p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-7">
                 <label className="flex cursor-pointer items-center gap-2 p-2.5 rounded-lg border border-white/15 hover:border-white/25 hover:bg-white/8 transition-all">
                   <Checkbox
                     checked={!!listFilters.has_ration_card}
@@ -252,6 +252,13 @@ export function FarmersPage() {
                     onCheckedChange={(c) => toggleFilter("has_shg", c === true)}
                   />
                   <span className="text-xs text-slate-300">SHG</span>
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 p-2.5 rounded-lg border border-white/15 hover:border-white/25 hover:bg-white/8 transition-all">
+                  <Checkbox
+                    checked={!!listFilters.has_gis}
+                    onCheckedChange={(c) => toggleFilter("has_gis", c === true)}
+                  />
+                  <span className="text-xs text-slate-300">GIS tagged</span>
                 </label>
               </div>
             </div>

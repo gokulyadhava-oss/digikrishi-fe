@@ -168,8 +168,7 @@ export function AgentsPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => navigate(`/agent/${o.id}`)}>
-                        <Eye className="mr-1 h-4 w-4" />
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/agent/${o.id}`)}>
                         View
                       </Button>
                     </TableCell>

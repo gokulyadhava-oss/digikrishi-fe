@@ -167,8 +167,12 @@ export function AgentDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {farmers.map((f) => (
-                  <TableRow key={f.id}>
+              {farmers.map((f) => (
+                  <TableRow
+                    key={f.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(`/farmers/${f.id}`)}
+                  >
                     <TableCell className="font-mono text-sm">{f.farmer_code}</TableCell>
                     <TableCell className="font-medium">{f.name}</TableCell>
                     <TableCell>{f.fpc ?? "—"}</TableCell>
@@ -178,7 +182,8 @@ export function AgentDetailPage() {
                         variant="outline"
                         size="sm"
                         disabled={generatingOtpFor === f.id}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setGeneratingOtpFor(f.id);
                           generateOtpMutation.mutate(f.id);
                         }}
