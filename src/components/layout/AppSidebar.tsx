@@ -7,6 +7,7 @@ import {
   UserCog,
   Settings,
   Menu,
+  Sprout,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { useAuthStore } from "@/stores/authStore";
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/farmers", label: "Farmers", icon: Users },
+  { to: "/crop-advisory", label: "Crop Advisory", icon: Sprout },
   { to: "/csv-upload", label: "CSV Upload", icon: Upload },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/agent", label: "Agents", icon: UserCog },
@@ -34,7 +36,8 @@ export function AppSidebar() {
       : navItems.filter(
           (item) =>
             item.to !== "/csv-upload" &&
-            item.to !== "/agent"
+            item.to !== "/agent" &&
+            item.to !== "/crop-advisory"
         );
 
   return (

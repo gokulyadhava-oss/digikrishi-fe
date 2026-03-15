@@ -5,14 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -30,7 +22,7 @@ import { searchFarmers } from "@/api/search";
 import { PageLoader } from "@/components/ui/loader";
 import { AssignFarmersModal } from "@/components/AssignFarmersModal";
 import { useNavigate } from "react-router-dom";
-import { UserPlus, UserCog, Link2, Eye } from "lucide-react";
+import { UserPlus, UserCog, Link2 } from "lucide-react";
 
 export function AgentsPage() {
   const navigate = useNavigate();
@@ -148,34 +140,51 @@ export function AgentsPage() {
               No agents yet. Add one below (tenant only).
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Mobile</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[100px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {officers.map((o) => (
-                  <TableRow key={o.id}>
-                    <TableCell className="font-medium">{o.email ?? "—"}</TableCell>
-                    <TableCell>{o.mobile ?? "—"}</TableCell>
-                    <TableCell>
-                      <span className={o.is_active ? "text-green-600" : "text-muted-foreground"}>
-                        {o.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => navigate(`/agent/${o.id}`)}>
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {officers.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => navigate(`/agent/${o.id}`)}
+                  className="group flex flex-col items-start gap-3 rounded-xl border border-border/60 bg-card/60 px-4 py-3 text-left shadow-sm transition hover:border-primary/50 hover:bg-card"
+                >
+                  <div className="flex w-full items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <UserCog className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold truncate max-w-[180px]">
+                          {o.email ?? "—"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {o.mobile ?? "No mobile"}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={[
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium border",
+                        o.is_active
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                          : "border-muted-foreground/30 bg-muted text-muted-foreground",
+                      ].join(" ")}
+                    >
+                      {o.is_active ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Link2 className="h-3.5 w-3.5 opacity-70" />
+                      <span>Tap to view details</span>
+                    </span>
+                    <span className="text-[11px] uppercase tracking-wide text-primary/80 group-hover:text-primary">
+                      View agent →
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

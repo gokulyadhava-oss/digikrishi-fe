@@ -17,9 +17,19 @@ export interface CropAdvisoryRecord {
   is_current_period?: boolean;
 }
 
+export interface WeatherSummary {
+  temperature_c: number | null;
+  humidity: number | null;
+  description: string | null;
+  icon: string | null;
+  raw?: any;
+}
+
 export interface PlotAdvisoriesResponse {
   days_since_sowing: number | null;
   advisories: CropAdvisoryRecord[];
+  /** Optional compact weather summary for the plot. */
+  weather?: WeatherSummary | null;
 }
 
 /** Tenant/agent: fetch advisories for a farmer's plot. */

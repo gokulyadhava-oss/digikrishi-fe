@@ -15,6 +15,10 @@ import { AnalyticsPage } from "@/pages/AnalyticsPage";
 import { AgentsPage } from "@/pages/UsersPage";
 import { AgentDetailPage } from "@/pages/AgentDetailPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { CropAdvisoryPage } from "@/pages/CropAdvisoryPage";
+import { CropAdvisoryGroupPage } from "@/pages/CropAdvisoryGroupPage";
+import { CropAdvisoryTimelinePage } from "@/pages/CropAdvisoryTimelinePage";
+import { AddCropWizardPage } from "@/pages/AddCropWizardPage";
 import { Toaster } from "@/components/ui/toast";
 
 function AuthListener() {
@@ -47,6 +51,38 @@ function ProtectedRoutes() {
           <Route path="agent" element={<AgentsPage />} />
           <Route path="agent/:id" element={<AgentDetailPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route
+            path="crop-advisory"
+            element={
+              <RoleGuard allowedRoles={["TENANT"]}>
+                <CropAdvisoryPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="crop-advisory/new"
+            element={
+              <RoleGuard allowedRoles={["TENANT"]}>
+                <AddCropWizardPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="crop-advisory/:crop/:season"
+            element={
+              <RoleGuard allowedRoles={["TENANT"]}>
+                <CropAdvisoryGroupPage />
+              </RoleGuard>
+            }
+          />
+          <Route
+            path="crop-advisory/:crop/:season/timeline"
+            element={
+              <RoleGuard allowedRoles={["TENANT"]}>
+                <CropAdvisoryTimelinePage />
+              </RoleGuard>
+            }
+          />
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>

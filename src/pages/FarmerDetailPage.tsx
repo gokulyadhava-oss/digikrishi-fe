@@ -160,40 +160,75 @@ function AdvisorySection({ farmerId, plots, expandedPlotId }: AdvisorySectionPro
     );
   }
 
-  const { days_since_sowing, advisories } = data;
-  const current = advisories.filter((a) => a.is_current_period);
-  const others = advisories.filter((a) => !a.is_current_period);
+  const { days_since_sowing, advisories, weather } = data;
+  // Only show advisories that have a date range (start_day and end_day)
+  const withDateRange = advisories.filter(
+    (a) => a.start_day != null && a.end_day != null
+  );
+  const current = withDateRange.filter((a) => a.is_current_period);
+  const others = withDateRange.filter((a) => !a.is_current_period);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Plot advisory
-          </p>
-          <p className="text-sm font-medium">
-            Variety: <span className="font-semibold">{activePlot.variety || "—"}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Sowing date:{" "}
-            {activePlot.sowing_date
-              ? new Date(activePlot.sowing_date).toLocaleDateString()
-              : "—"}
-          </p>
-        </div>
-        {days_since_sowing != null && (
-          <div className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm">
-            <span className="font-semibold text-primary">
-              {days_since_sowing} days
-            </span>{" "}
-            <span className="text-primary/80">since sowing</span>
+      <div className="flex flex-col gap-3">
+        {/* Weather strip */}
+        {weather && (weather.temperature_c != null || weather.description) && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-500/50 bg-gradient-to-r from-sky-950/70 via-sky-900/60 to-sky-800/60 px-4 py-3 text-sky-50 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-500/20 text-sky-100">
+                <span className="text-lg leading-none">☁️</span>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-200/90">
+                  Weather now
+                </p>
+                <p className="text-sm font-semibold">
+                  {weather.temperature_c != null ? `${Math.round(weather.temperature_c)}°C` : "—"}
+                  {weather.description ? (
+                    <span className="text-sky-100/80"> · {weather.description}</span>
+                  ) : null}
+                </p>
+              </div>
+            </div>
+            {typeof weather.humidity === "number" && (
+              <div className="flex flex-col items-end text-xs">
+                <span className="font-semibold text-sky-100">
+                  Humidity {Math.round(weather.humidity)}%
+                </span>
+              </div>
+            )}
           </div>
         )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Plot advisory
+            </p>
+            <p className="text-sm font-medium">
+              Variety: <span className="font-semibold">{activePlot.variety || "—"}</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Sowing date:{" "}
+              {activePlot.sowing_date
+                ? new Date(activePlot.sowing_date).toLocaleDateString()
+                : "—"}
+            </p>
+          </div>
+          {days_since_sowing != null && (
+            <div className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm">
+              <span className="font-semibold text-primary">
+                {days_since_sowing} days
+              </span>{" "}
+              <span className="text-primary/80">since sowing</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {advisories.length === 0 ? (
+      {withDateRange.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No advisories available for this plot yet.
+          No advisories with date range for this plot yet.
         </p>
       ) : (
         <div className="space-y-6">
